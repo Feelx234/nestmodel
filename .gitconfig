@@ -1,0 +1,3 @@
+[filter "jupyternotebook"]
+	clean = python clean_errors.py %f
+	required

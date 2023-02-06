@@ -1,0 +1,8 @@
+[MASTER]
+disable= missing-module-docstring
+[FORMAT]
+max-line-length=200
+
+# allow 1 or 2 length variable names
+good-names-rgxs=^[_a-zGW][_a-z0-9L]?$
+good-names=WL_fast,WL_both, M, A, A0, A1, A_work, M_in, C1, C2, WL1, WL2, SAE, ERGM, ERGM_experiments, G_str
