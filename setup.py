@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='nestmodel',
-    version='0.1.0',
+    version='0.1.1',
     packages=['nestmodel', 'nestmodel.tests'],
     author='Felix Stamm',
     author_email='felix.stamm@cssh.rwth-aachen.de',
