@@ -1,6 +1,6 @@
 from itertools import chain
 import numpy as np
-from numba import njit, int64, uint64, prange
+from numba import njit, int64, uint64, prange, get_num_threads
 #from numba import uint32, bool_
 from numba.typed import List, Dict # pylint: disable=no-name-in-module
 
@@ -25,14 +25,14 @@ def get_dead_edges_full(edge_with_node_labels, edges, order):
 
     num_labelings = edge_with_node_labels.shape[1]//2
 
-    dead_indicators = np.zeros((edges.shape[0], num_labelings), dtype=np.bool)
+    dead_indicators = np.zeros((edges.shape[0], num_labelings), dtype=np.bool_)
     for i in range(num_labelings):
         _get_dead_edges(edge_with_node_labels[:,i*2:i*2+2], edges, order, dead_indicators[:,i])
     return dead_indicators
 
-@njit
+@njit(cache=True)
 def _get_dead_edges(edge_with_node_labels, edges, order, out):
-    """Compute labels starting from 0 consecutively """
+    """Computes dead edges, i.e. edges that will never be flipped """
     #print(edge_with_node_labels.shape)
     start_edge = order[0]
     last_label_0 = edge_with_node_labels[start_edge, 0]
@@ -80,7 +80,12 @@ def _get_dead_edges(edge_with_node_labels, edges, order, out):
 
     return out
 
-
+@njit(cache=True)
+def create_mono_from_arrs(keys, vals):
+    out = {}
+    for key, val in zip(keys, vals):
+        out[key] = val
+    return out
 
 #@njit
 def get_edge_id1(edge_with_node_labels, order, out):
@@ -88,7 +93,7 @@ def get_edge_id1(edge_with_node_labels, order, out):
     #order = np.lexsort(edge_with_node_labels.T)
     return _get_edge_id(edge_with_node_labels, order, out)
 
-@njit
+@njit(cache=True)
 def _get_edge_id(edge_with_node_labels, order, out):
     """Compute labels starting from 0 consecutively """
 
@@ -115,93 +120,8 @@ def _get_edge_id(edge_with_node_labels, order, out):
 
     return out, is_mono
 
-def get_edge_id(labels, edges):
-    """Compute labels starting from 0 consecutively """
-    max_label = labels.max()
-    edge_id =  max_label*(labels[edges[:,0]]) + labels[edges[:,1]]
-    return edge_id
 
-@njit
-def get_edge_id2(labels, edges, out):
-    """Compute labels starting from 0 consecutively """
-
-
-    d = {(0, 0) : 0}
-    del d[(0, 0)]
-    is_mono = {0 : True}
-    for i in range(edges.shape[0]):
-        e1 = edges[i,0]
-        e2 = edges[i,1]
-        tpl = (labels[e1], labels[e2])
-        if tpl in d:
-            out[i] = d[tpl]
-        else:
-            n = len(d)
-            out[i] = n
-            d[tpl] = n
-            if labels[e1] == labels[e2]:
-                is_mono[n] = True
-
-    return out, is_mono
-
-
-@njit
-def get_edge_id3(labels, edges, out):
-    """Compute labels starting from 0 consecutively """
-
-
-    d = {uint64(0) : 0}
-    del d[uint64(0)]
-    is_mono = {0 : True}
-    for i in range(edges.shape[0]):
-        e1 = edges[i,0]
-        e2 = edges[i,1]
-        tpl = uint64(labels[e1]) * uint64(labels[e2])
-        if tpl in d:
-            out[i] = d[tpl]
-        else:
-            n = len(d)
-            out[i] = n
-            d[tpl] = n
-            if labels[e1] == labels[e2]:
-                is_mono[n] = True
-
-    return out, is_mono
-
-#@njit([(int64[:], int64[:,:], int64[:]), (uint32[:], int64[:,:], uint32[:])])
-def get_edge_id4(labels, edges, out):
-    """Compute labels starting from 0 consecutively """
-    arr = np.array([ {-1 : -1} for _ in range(int64(labels.max())+1) ])
-
-    is_mono = {0 : True}
-    n=0
-    for i in range(edges.shape[0]):
-        l1 = labels[edges[i,0]]
-        l2 = labels[edges[i,1]]
-        d=arr[l1]
-        if l2 in d:
-            out[i]=d[l2]
-        else:
-            d[l2] = n
-            out[i]=n
-            n+=1
-            if l1== l2:
-                is_mono[n] = True
-    return out, is_mono
-
-
-
-@njit(parallel=True)
-def fill_arr(arr, labels, edges):
-    """Fill arr with the product of the labels at the endpoints of edges"""
-    for i in prange(edges.shape[0]):#pylint: disable=not-an-iterable
-        l1 = labels[edges[i,0]]
-        l2 = labels[edges[i,1]]
-        arr[i] = l1 * l2
-
-
-
-@njit()
+@njit(cache=True)
 def assign_node_labels(labels, edges, out, is_directed):
     """Assign to out the node labels of the edges"""
     if not is_directed:
@@ -290,7 +210,7 @@ def sort_edges(edges, labelings, is_directed):
 
 
 
-@njit
+@njit(cache=True)
 def rewire_mono_small(edges, n_rewire):
     """
     Rewires a single class network specified by edges in place!
@@ -304,10 +224,11 @@ def rewire_mono_small(edges, n_rewire):
 
     for _ in range(n_rewire):
         index1 = np.random.randint(0, delta)
-        offset = np.random.randint(1, delta)
+        index2 = np.random.randint(0, delta)
+        if index1==index2:
+            continue
         i2_1 = np.random.randint(0, 2)
         i2_2 = 1 - i2_1
-        index2 = (index1 + offset) % (delta)
         e1_l, e1_r = edges[index1,:]
         e2_l = edges[index2, i2_1]
         e2_r = edges[index2, i2_2]
@@ -331,7 +252,7 @@ def rewire_mono_small(edges, n_rewire):
             edges[index2, 0] = e2_l
             edges[index2, 1] = e1_r
 
-@njit
+@njit(cache=True)
 def create_neighborhood_dict(edges):
     """Converts the edges in edges into a dict which maps edges onto their location in the edge list
     Example:
@@ -359,7 +280,7 @@ def create_neighborhood_dict(edges):
     return neigh
 
 
-@njit
+@njit(cache=True)
 def rewire_mono_large(edges, n_rewire):
     """
     Rewires a single class network specified by edges in place!
@@ -368,7 +289,7 @@ def rewire_mono_large(edges, n_rewire):
     This function is optimized for larger networks it does dictionary lookups to avoid multi-edges
     """
 
-    delta = len(edges)
+    num_edges = len(edges)
     neigh = create_neighborhood_dict(edges)
 
     # start:
@@ -379,11 +300,12 @@ def rewire_mono_large(edges, n_rewire):
     #  e2_l <-> e1_r
 
     for _ in range(n_rewire):
-        index1 = np.random.randint(0, delta)
-        offset = np.random.randint(1, delta)
+        index1 = np.random.randint(0, num_edges)
+        index2 = np.random.randint(0, num_edges)
+        if index1==index2:
+            continue
         i2_1 = np.random.randint(0, 2)
         i2_2 = 1 - i2_1
-        index2 = (index1 + offset) % (delta)
         e1_l, e1_r = edges[index1,:]
         e2_l = edges[index2, i2_1]
         e2_r = edges[index2, i2_2]
@@ -425,9 +347,8 @@ def rewire_bipartite(edges, lower, upper, n_rewire):
         raise ValueError
 
     _rewire_bipartite_small(edges[lower:upper], n_rewire)
-    #print(edges[lower:upper])
 
-@njit
+@njit(cache=True)
 def _rewire_bipartite_small(edges, n_rewire):
     """ Rewires a bipartite network specified in edges
 
@@ -443,10 +364,12 @@ def _rewire_bipartite_small(edges, n_rewire):
 
     for _ in range(n_rewire):
         index1 = np.random.randint(0, delta)
-        offset = np.random.randint(1, delta)
-        index2 = (index1 + offset) % (delta)
+        index2 = np.random.randint(0, delta)
+        if index1==index2:
+            continue
         e1_l, e1_r = edges[index1,:]
         e2_l, e2_r = edges[index2 ,:]
+
 
         if (e1_r == e2_r) or (e1_l == e2_l): # swap would do nothing
             continue
@@ -465,8 +388,9 @@ def _rewire_bipartite_small(edges, n_rewire):
             edges[index2, 1] = e1_r
 
 
-@njit
-def _rewire_bipartite_large(edges, n_rewire):
+
+@njit(cache=True)
+def _rewire_bipartite_large(edges, n_rewire, is_directed):
     """ Rewires a bipartite network specified in edges
 
     This is optimized for larger networks and uses a dictionary lookup to avoid multi edges
@@ -484,9 +408,12 @@ def _rewire_bipartite_large(edges, n_rewire):
         neigh[l].append(r)
 
     for _ in range(n_rewire):
+        if is_directed:
+            triangle_flip_large(edges, neigh)
         index1 = np.random.randint(0, delta)
-        offset = np.random.randint(1, delta)
-        index2 = (index1 + offset) % (delta)
+        index2 = np.random.randint(0, delta)
+        if index1==index2:
+            continue
         e1_l, e1_r = edges[index1,:]
         e2_l, e2_r = edges[index2 ,:]
 
@@ -509,7 +436,52 @@ def _rewire_bipartite_large(edges, n_rewire):
             neigh[e1_l].append(e2_r)
             neigh[e2_l].append(e1_r)
 
+
+
 @njit
+def triangle_flip_large(edges, neigh):
+    """
+
+    Has the assumption, that there are no self loops or multi edges!
+    """
+    num_edges = len(edges)
+    index1 = np.random.randint(0, num_edges)
+    index2 = np.random.randint(0, num_edges)
+    if index1==index2:
+        return
+    e1_l, e1_r = edges[index1,:]
+    e2_l, e2_r = edges[index2,:]
+    if e1_r != e2_l:
+        return
+
+    index3 = np.random.randint(0, num_edges)
+    if index1==index3 or index3==index2:
+        return
+    e3_l, e3_r = edges[index3,:]
+    if e2_r != e3_l or e3_r != e1_l:
+        return
+
+    if e1_l in neigh[e1_r] or e2_l in neigh[e2_r] or e3_l in neigh[e3_r]:
+        return
+
+    neigh[e1_l].remove(e1_r)
+    neigh[e2_l].remove(e2_r)
+    neigh[e3_l].remove(e3_r)
+
+    neigh[e1_r].append(e1_l)
+    neigh[e2_r].append(e2_l)
+    neigh[e3_r].append(e3_l)
+
+    edges[index1,0] = e1_r
+    edges[index1,1] = e1_l
+
+    edges[index2,0] = e2_r
+    edges[index2,1] = e2_l
+
+    edges[index3,0] = e3_r
+    edges[index3,1] = e3_l
+
+@njit(cache=True)
 def _get_block_indices(uids, is_dead, out):
     """Returns the indices of block changes in arr
     input [4,4,2,2,3,5]
@@ -546,7 +518,7 @@ def get_block_indices(edges_classes, dead_arrs):
     out = []
     for arr, dead_arr in zip(edges_classes.T, dead_arrs):
 
-        out_arr =_get_block_indices(arr, dead_arr, np.empty((len(arr),2), dtype=np.int32))
+        out_arr =_get_block_indices(arr, dead_arr, np.empty((len(arr),2), dtype=np.int64))
         #print(arr)
         #print(dead_arr)
         #c=45673
@@ -564,13 +536,28 @@ def get_block_indices(edges_classes, dead_arrs):
 
     return out
 
-@njit
+@njit(cache=True)
 def _set_seed(seed):
     """Set the need. This needs to be done within numba @njit function"""
     np.random.seed(seed)
 
+
+def get_flip_attempts_from_input(block, num_flip_attempts_in):
+    if isinstance(num_flip_attempts_in, (int, np.integer)):
+        num_edges = (block[:,1]-block[:,0]).ravel()
+        num_flip_attempts = num_flip_attempts_in * num_edges
+    elif isinstance(num_flip_attempts_in, tuple):
+        lower, upper = num_flip_attempts_in
+        assert isinstance(lower, (int, np.integer))
+        assert isinstance(upper, (int, np.integer))
+        assert lower < upper
+        num_edges = (block[:,1]-block[:,0]).ravel()
+        num_flip_attempts = np.random.randint(lower * num_edges, upper*num_edges)
+    return num_flip_attempts
+
+
 #@njit
-def rewire_fast(edges, edge_class, current_mono, block, is_directed, seed=None):
+def rewire_fast(edges, edge_class, is_mono_color, block, is_directed, seed=None, num_flip_attempts_in=1, parallel=False):
     """This function rewires the edges in place thereby preserving the WL classes
 
     This function assumes edges to be ordered according to the classes
@@ -578,28 +565,76 @@ def rewire_fast(edges, edge_class, current_mono, block, is_directed, seed=None):
     """
     # assumes edges to be ordered
     if not seed is None:
-        _set_seed(seed)
+        _set_seed(seed) # numba seed
+        np.random.seed(seed) # numpy seed, seperate from numba seed
+    num_flip_attempts = get_flip_attempts_from_input(block, num_flip_attempts_in)
+    if parallel:
+        return _rewire_fast_parallel(edges, edge_class, is_mono_color, block, is_directed, num_flip_attempts)
+    else:
+        return _rewire_fast(edges, edge_class, is_mono_color, block, is_directed, num_flip_attempts)
 
+
+@njit(cache=True)
+def _rewire_fast(edges, edge_class, is_mono_color, block, is_directed, num_flip_attempts):
     #deltas=[]
     for i in range(len(block)):
 
         lower = block[i,0]
         upper = block[i,1]
-        delta=upper-lower
-        #if delta<=1:
-        #    continue
-        #deltas.append(delta)
+        block_size=upper-lower
+        current_flips = num_flip_attempts[i]
         current_class = edge_class[lower]
 
-        if (not is_directed) and (current_mono.get(current_class, False)):
-            #print(f"---{delta}")
-            if delta< 50:
-                rewire_mono_small(edges[lower:upper], np.random.randint(delta, 2*delta))
+        if (not is_directed) and (is_mono_color.get(current_class, False)):
+            if block_size< 50:
+                rewire_mono_small(edges[lower:upper], current_flips)
             else:
-                rewire_mono_large(edges[lower:upper], np.random.randint(delta, 2*delta))
+                rewire_mono_large(edges[lower:upper], current_flips)
         else:
-            #print(f"-{delta}")
-            if delta< 50:
-                _rewire_bipartite_small(edges[lower:upper], np.random.randint(delta, 2*delta))
+            _rewire_bipartite_large(edges[lower:upper], current_flips, is_directed)
+
+
+@njit(cache=True)
+def to_chunks(arr, n_chunks):
+    """Chunks a given workload into approximately equally large chunks"""
+    total = arr.sum()
+    per_chunk = total//n_chunks
+    chunks = np.zeros(n_chunks+2, dtype=np.uint32)
+    s=0
+    i=0
+    u=0
+    while i < len(arr):
+        s=0
+        u+=1
+        while s < per_chunk and i < len(arr):
+            s+=arr[i]
+            i+=1
+        chunks[u] = i
+    return chunks[:u+1]
+
+
+@njit(cache=True, parallel=True)
+def _rewire_fast_parallel(edges, edge_class, is_mono_color, block, is_directed, num_flip_attempts):
+
+    # the next lines hack some "load balancing"
+    chunks = to_chunks(block[:,1]-block[:,0], get_num_threads()*10)
+    to_iter = np.arange(len(chunks)-1)
+    np.random.shuffle(to_iter) # randomly assign chunks to threads
+
+    #print("parallel " + str(get_num_threads()))
+    for i_iter in prange(len(to_iter)):
+        for i in range(chunks[to_iter[i_iter]], chunks[to_iter[i_iter]+1]):
+            #i = to_iter[u]
+            lower = block[i,0]
+            upper = block[i,1]
+            block_size=upper-lower
+            current_flips = num_flip_attempts[i]
+            current_class = edge_class[lower]
+
+            if (not is_directed) and (is_mono_color.get(current_class, False)):
+                if block_size< 50:
+                    rewire_mono_small(edges[lower:upper], current_flips)
+                else:
+                    rewire_mono_large(edges[lower:upper], current_flips)
             else:
-                _rewire_bipartite_large(edges[lower:upper], np.random.randint(delta, 2*delta))
+                _rewire_bipartite_large(edges[lower:upper], current_flips, is_directed)

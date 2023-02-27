@@ -1,6 +1,6 @@
 # pylint: disable=consider-using-enumerate
 from numba import njit
-from numba.types import bool_, uint32, uint64
+from numba.types import uint32, uint64
 import numpy as np
 
 
@@ -14,7 +14,7 @@ def primesfrom2to(n):
     taken from Stackoverflow
     """
     size = int(n//3 + (n%6==2))
-    sieve = np.ones(size, dtype=bool_)
+    sieve = np.ones(size, dtype=np.bool_)
     for i in range(1,int(n**0.5)//3+1):
         if sieve[i]:
             k=3*i+1|1

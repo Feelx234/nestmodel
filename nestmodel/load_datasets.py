@@ -137,6 +137,8 @@ def load_fg_dataset_cached(datasets_dir, dataset_name, verbosity=0, force_reload
     """Loads a dataset using the binary file format from graph-tool"""
     if datasets_dir is None:
         datasets_dir = get_datasets_path()
+    else:
+        datasets_dir = Path(datasets_dir)
     dataset = find_dataset(dataset_name)
     cache_file = datasets_dir/(dataset.file_name+".npz")
     if cache_file.is_file() and not force_reload:
@@ -165,7 +167,7 @@ def load_gt_dataset_cached(datasets_dir, dataset_name, verbosity=0, force_reload
     if cache_file.is_file() and not force_reload:
         if verbosity>1:
             print("loading cached")
-        import graph_tool.all as gt # pylint: disable=import-outside-toplevel
+        import graph_tool.all as gt # pylint: disable=import-outside-toplevel # type: ignore
         return gt.load_graph(str(cache_file.absolute()))
     else:
         if verbosity>1:

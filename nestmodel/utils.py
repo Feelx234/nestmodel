@@ -9,7 +9,7 @@ from numba import njit
 def nx_to_gt(G, verbosity=0):
     """Convert a networkx graph G into a graph-tool graph"""
 
-    import graph_tool.all as gt
+    import graph_tool.all as gt # type: ignore
     if verbosity>2:
         print(repr(G), len(G.nodes), len(G.edges))
     if verbosity>3:
@@ -33,7 +33,7 @@ def nx_to_gt(G, verbosity=0):
 
 def graph_tool_from_edges(edges, size, is_directed):
     """Create a new graph-tool graph from an edge list"""
-    import graph_tool.all as gt
+    import graph_tool.all as gt # type: ignore
     if size is None:
         unique = np.unique(edges.flatten())
         assert unique[0]==0, "expecting to start from 0 " + str(unique[:10])

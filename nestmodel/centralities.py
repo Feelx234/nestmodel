@@ -47,7 +47,7 @@ def calc_pagerank(G, alpha = 0.85, epsilon=0, max_iter=None):
     if n_nodes==0:
         raise ValueError()
     elif n_nodes==1:
-        pagerank_vector = np.array([1])
+        pagerank_vector = np.array([1.0])
     elif n_nodes == 2:
         pagerank_vector = _pagerank_2_nodes(G)
     else:

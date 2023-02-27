@@ -17,7 +17,7 @@ class FastGraph:
         self.edges_ordered = None
         self.is_directed = is_directed
         self.base_partitions = None
-        self.latest_iteration_rewiring = 1000000
+        self.latest_iteration_rewiring = None
         if num_nodes is None:
             self.num_nodes = edges.ravel().max()+1
         else:
@@ -63,7 +63,7 @@ class FastGraph:
 
 
     @staticmethod
-    def from_gt(G):
+    def from_gt(G): # pragma: gt no cover
         """Creates a FastGraph object from a graphtool graph"""
         edges = np.array(G.get_edges(), dtype=np.uint32)
         is_directed = G.is_directed()
@@ -86,92 +86,110 @@ class FastGraph:
         return FastGraph(edges, is_directed)
 
 
-    def to_gt(self, switch=False):
+    def to_gt(self):
         """Convert the graph to a graph-tool graph"""
         edges = self.edges
-        if switch:
-            edges = switch_in_out(edges)
         return graph_tool_from_edges(edges, self.num_nodes, self.is_directed)
 
 
-    def to_nx(self, switch=False):
+    def to_nx(self):
         """Convert the graph to a networkx graph"""
         edges = self.edges
-        if switch:
-            edges = switch_in_out(edges)
         return networkx_from_edges(edges, self.num_nodes, self.is_directed)
 
 
 
-    def to_coo(self, switch=False):
+    def to_coo(self):
         """Returns a sparse coo-matrix representation of the graph"""
         from scipy.sparse import coo_matrix # pylint: disable=import-outside-toplevel
         edges = self.edges
         if not self.is_directed:
             edges = make_directed(edges)
-        if switch:
-            edges = switch_in_out(edges)
 
         return coo_matrix((np.ones(edges.shape[0]), (edges[:,0], edges[:,1])), shape = (self.num_nodes, self.num_nodes))
 
 
-    def save_npz(self, outfile):
+    def save_npz(self, outfile, include_wl=False):
         """Save the FastGraph object as .npz"""
-        np.savez(outfile, edges=self.edges, is_directed=self.is_directed)
+        if not include_wl:
+            np.savez(outfile, edges=self.edges, is_directed=self.is_directed)
+        else:
+            if self.base_partitions is None or self.wl_iterations is None:
+                raise NotImplementedError("Saving without computing the information first makes no sense")
+            kwargs = {  "edges":self.edges,
+                        "is_directed":self.is_directed,
+                        "base_partitions":self.base_partitions,
+                        "wl_iterations":self.wl_iterations,
+                        "edges_classes" : self.edges_classes,
+                        "mono_len": len(self.is_mono),
+                        "block_len" : len(self.block_indices)}
+            for i, x in enumerate(self.is_mono):
+                kwargs[f"mono{i}_keys"] = np.array(list(x.keys()), np.int64)
+                kwargs[f"mono{i}_values"] = np.array(list(x.values()), np.bool_)
+            for i, x in enumerate(self.block_indices):
+                kwargs[f"block_indices{i}"] = x
+            np.savez(outfile, **kwargs)
+
+    @staticmethod
+    def load_npz(file):
+        npzfile = np.load(file)
+        if len(npzfile) == 2:
+            return FastGraph(npzfile["edges"], bool(npzfile["is_directed"]))
+        else:
+            G = FastGraph(npzfile["edges"], bool(npzfile["is_directed"]))
+            G.base_partitions = npzfile["base_partitions"]
+            G.wl_iterations = npzfile["wl_iterations"]
+            G.edges_classes = npzfile["edges_classes"]
+            if "is_mono" in npzfile:
+                G.is_mono = npzfile["is_mono"]
+            else:
+                from nestmodel.fast_rewire import create_mono_from_arrs
+                G.is_mono = []
+                for i in range(npzfile["mono_len"]):
+                    G.is_mono.append(create_mono_from_arrs(npzfile[f'mono{i}_keys'], npzfile[f'mono{i}_values']))
+                G.block_indices = []
+                for i in range(npzfile["block_len"]):
+                    G.block_indices.append(npzfile[f'block_indices{i}'])
+            return G
 
 
-    def calc_wl(self, edges = None, initial_colors=None):
+    def calc_wl(self, initial_colors=None):
         """Compute the WL colors of this graph using the provided initial colors"""
-        if edges is None:
-            edges = self.edges
-        if not self.is_directed:
-            edges2 = np.vstack((edges[:,1], edges[:,0])).T
-            edges = np.vstack((edges, edges2))
-
-        if type(initial_colors).__module__ == np.__name__:
-            return WL_fast(edges, labels = initial_colors)
-        elif initial_colors is not None and "out_degree" in initial_colors:
-            return WL_fast(edges, labels = self.out_degree)
-        else:
-            return WL_fast(edges)
+        return self._calc_wl(WL_fast, initial_colors)
 
 
-
-    def calc_wl_both(self, edges = None, initial_colors=None):
+    def calc_wl_both(self, initial_colors=None):
         """Compute the WL partition over both the in and out neighborhood"""
-        if edges is None:
-            edges = self.edges
+        return self._calc_wl(WL_both, initial_colors)
+
+
+    def _calc_wl(self, method, initial_colors=None):
+        edges = self.edges
         if not self.is_directed:
             edges2 = np.vstack((edges[:,1], edges[:,0])).T
             edges = np.vstack((edges, edges2))
 
-        if type(initial_colors).__module__ == np.__name__:
-            return WL_both(edges, labels = initial_colors)
-        elif initial_colors is not None and "out_degree" in initial_colors:
-            return WL_both(edges, labels = self.out_degree)
+        if type(initial_colors).__module__ == np.__name__: # is numpy array
+            return method(edges, labels = initial_colors)
+        elif initial_colors is not None and "out_degree" == initial_colors:
+            return method(edges, labels = self.out_degree)
         else:
-            return WL_both(edges)
+            return method(edges)
 
-
-    def calc_wl_arr(self, initial_colors=None):
-        """Calculate the WL colors as an array"""
-        return np.array(self.calc_wl(initial_colors=initial_colors), dtype=np.uint32)
-
-
-    def ensure_base_wl(self, initial_colors=None):
+    def ensure_base_wl(self, initial_colors=None, both=False):
         """Compute the base WL partition if they have not yet been computed"""
         if self.base_partitions is None:
-            self.calc_base_wl(initial_colors=initial_colors)
+            self.calc_base_wl(initial_colors=initial_colors, both=both)
 
 
     def calc_base_wl(self, initial_colors=None, both=False):
         """Compute and store the base WL partition"""
-        if self.latest_iteration_rewiring != 1000000:
-            raise ValueError("Seems some rewiring only employed cannot calc base WL")
+        if not self.latest_iteration_rewiring is None:
+            raise ValueError("Seems some rewiring already employed, cannot calc base WL")
         if both is False:
-            partitions = self.calc_wl(self._edges, initial_colors=initial_colors)
+            partitions = self.calc_wl(initial_colors=initial_colors)
         else:
-            partitions = self.calc_wl_both(self._edges, initial_colors=initial_colors)
+            partitions = self.calc_wl_both(initial_colors=initial_colors)
 
         self.base_partitions = np.array(partitions, dtype=np.uint32)
         self.wl_iterations = len(self.base_partitions)
@@ -180,14 +198,13 @@ class FastGraph:
     def ensure_edges_prepared(self, initial_colors=None, both=False):
         """Prepare the edges by first ensuring the base WL and then sorting edges by base WL"""
         if self.base_partitions is None:
-            self.calc_base_wl(initial_colors=initial_colors, both=both)
+            self.ensure_base_wl(initial_colors=initial_colors, both=both)
         if self.edges_ordered is None:
             self.reset_edges_ordered()
 
 
     def reset_edges_ordered(self):
         """Sort edges according to the partitions"""
-        print("resetting")
         self.edges_ordered, self.edges_classes, self.dead_arr, self.is_mono = sort_edges(self._edges, self.base_partitions, self.is_directed)
         self.block_indices = get_block_indices(self.edges_classes, self.dead_arr)
 
@@ -206,31 +223,37 @@ class FastGraph:
         """
         assert self.base_partitions is not None, "Base partitions are none. Call G.ensure_edges_prepared() first."
         assert depth < len(self.base_partitions), f"{depth} {len(self.base_partitions)}"
-        assert depth <= self.latest_iteration_rewiring, f"{depth} {self.latest_iteration_rewiring}"
+        assert self.latest_iteration_rewiring is None or depth <= self.latest_iteration_rewiring, f"{depth} {self.latest_iteration_rewiring}"
         assert method in (1, 2)
         if kwargs is not None:
             for key in kwargs:
-                assert key in ("seed", "n_rewire")
+                assert key in ("seed", "n_rewire", "r", "parallel")
         self.latest_iteration_rewiring = depth
 
         self.ensure_edges_prepared()
-        if self.check_results:
+        if self.check_results:  # pragma: no cover
             if self.is_directed:
                 ins, outs = calc_color_histogram(self._edges, self.base_partitions[depth], self.is_directed)
             else:
                 hist = calc_color_histogram(self._edges, self.base_partitions[depth], self.is_directed)
         if method==1:
+            seed = kwargs.get("seed", None)
+            r = kwargs.get("r", 1)
+            parallel = kwargs.get("parallel", False)
             rewire_fast(self.edges_ordered,
                                 self.edges_classes[:,depth],
                                 self.is_mono[depth],
                                 self.block_indices[depth],
-                                self.is_directed)
+                                self.is_directed,
+                                seed=seed,
+                                num_flip_attempts_in=r,
+                                parallel=parallel)
             res = None
         elif method == 2:
             from nestmodel.fast_rewire2 import fg_rewire_nest  # pylint: disable=import-outside-toplevel
             res = fg_rewire_nest(self, depth, kwargs["n_rewire"], kwargs["seed"])
 
-        if self.check_results:
+        if self.check_results: # pragma: no cover
             if self.is_directed:
                 from nestmodel.tests.testing import check_color_histograms_agree # pylint: disable=import-outside-toplevel
                 ins2, outs2 = calc_color_histogram(self.edges_ordered, self.base_partitions[depth], self.is_directed)

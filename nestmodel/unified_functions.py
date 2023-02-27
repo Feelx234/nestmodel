@@ -9,7 +9,7 @@ def is_networkx_str(G_str):
     return False
 
 
-def is_graphtool_str(G_str):
+def is_graphtool_str(G_str): # pragma: gt no cover
     """Checks whether a repr string is from graph-tool Graph"""
     if G_str.startswith("<Graph object, "):
         return True
@@ -30,7 +30,7 @@ def is_directed(G):
         return G.is_directed()
     elif is_fastgraph_str(G_str):
         return G.is_directed
-    elif is_graphtool_str(G_str):
+    elif is_graphtool_str(G_str): # pragma: gt no cover
         return G.is_directed()
     else:
         raise NotImplementedError()
@@ -43,7 +43,7 @@ def num_nodes(G):
         return G.number_of_nodes()
     elif is_fastgraph_str(G_str):
         return G.num_nodes
-    elif is_graphtool_str(G_str):
+    elif is_graphtool_str(G_str): # pragma: gt no cover
         return G.num_vertices()
     else:
         raise NotImplementedError()
@@ -56,8 +56,8 @@ def get_sparse_adjacency(G):
         return nx.to_scipy_sparse_array(G, dtype=np.float64)
     elif is_fastgraph_str(G_str):
         return G.to_coo()
-    elif is_graphtool_str(G_str):
-        from graph_tool.spectral import adjacency # pylint: disable=import-outside-toplevel
+    elif is_graphtool_str(G_str): # pragma: gt no cover
+        from graph_tool.spectral import adjacency # pylint: disable=import-outside-toplevel # type: ignore
         return adjacency(G).T
     else:
         raise NotImplementedError()
@@ -73,7 +73,7 @@ def get_out_degree_array(G):
 
     elif is_fastgraph_str(G_str):
         return G.out_degree
-    elif is_graphtool_str(G_str):
+    elif is_graphtool_str(G_str): # pragma: gt no cover
         return G.get_out_degrees(np.arange(num_nodes(G)))
     else:
         raise NotImplementedError()

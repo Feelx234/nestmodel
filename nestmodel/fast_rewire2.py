@@ -3,12 +3,12 @@ from numba.typed import List, Dict # pylint: disable=no-name-in-module
 from numba import njit
 
 
-@njit
+@njit(cache=True)
 def _create_neighborhood_dict2(edges, offset):
     if edges.shape[0]==0:
         raise ValueError("cannot handly empty edge sets")
     if edges.shape[1]!=2:
-        raise ValueError("edge set should be of size n_edges x 2")
+        raise ValueError("edge set should be of shape n_edges x 2")
 
     neigh = Dict()
     neigh[(edges[0,0], edges[0,0])] = offset
@@ -30,7 +30,7 @@ def get_subgraphs(G, depth):
 
 
 
-@njit
+@njit(cache=True)
 def _get_subgraphs(edges, blocks, edges_classes, is_mono):
     """
     blocks = G.block_indices[depth]
@@ -51,7 +51,7 @@ def _get_subgraphs(edges, blocks, edges_classes, is_mono):
 
 
 
-@njit
+@njit(cache=True)
 def normal_flip_subgraphs(edge_list, subgraphs, is_directed):
     """Perform the normal edge flip
     Therefor first choose a subgraph at random
@@ -62,7 +62,7 @@ def normal_flip_subgraphs(edge_list, subgraphs, is_directed):
 
 
 
-@njit
+@njit(cache=True)
 def normal_flip(edge_list, target_start_id, target_end_id, edge_dict, is_directed, is_mono):
     """Perform a normal edge flip on a specific subgraph
     Therefor choose two edges from the subgraph edges
@@ -113,7 +113,7 @@ def normal_flip(edge_list, target_start_id, target_end_id, edge_dict, is_directe
 
 
 
-@njit
+@njit(cache=True)
 def triangle_flip(edge_list, subgraphs):
     """Choose a subgraph and if the subgraph is mono, flip the subgraph"""
     subgraph_index = np.random.randint(0, len(subgraphs))
@@ -129,7 +129,7 @@ def triangle_flip(edge_list, subgraphs):
 
 
 
-@njit
+@njit(cache=True)
 def _triangle_flip(edge_list, edge_dict, u1, u2, u3):
     """Flip the direction of the potential triangle u1->u2->u3->u1"""
 
@@ -169,7 +169,7 @@ def _triangle_flip(edge_list, edge_dict, u1, u2, u3):
 
 
 
-@njit
+@njit(cache=True)
 def _sg_flip_directed(edges, subgraphs, n_rewire):
     n=0
     t=0
@@ -180,7 +180,7 @@ def _sg_flip_directed(edges, subgraphs, n_rewire):
 
 
 
-@njit
+@njit(cache=True)
 def _sg_flip_undirected(edges, subgraphs, n_rewire):
     n=0
     for _ in range(n_rewire):
@@ -189,7 +189,7 @@ def _sg_flip_undirected(edges, subgraphs, n_rewire):
 
 
 
-@njit
+@njit(cache=True)
 def _set_seed(seed):
     """Set the need. This needs to be done within numba @njit function"""
     np.random.seed(seed)

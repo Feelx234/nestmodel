@@ -1,0 +1,18 @@
+[report]
+exclude_lines =
+        pragma: no cover
+        pragma: gt no cover
+        if __name__ == .__main__.:
+        def __repr__
+        def __eq__
+        def __lt__
+        raise RuntimeWarning
+        raise NotImplementedError
+        except ImportError:
+        @abstractmethod
+        @abc.abstractmethod
+
+omit =
+        nestmodel/tests/*
+
+# pytest --cov nestmodel --cov-report html .

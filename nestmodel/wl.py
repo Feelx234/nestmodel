@@ -60,7 +60,7 @@ def WL(g, k_max=30, use_components=False, verbosity=0, return_meanings=False, ad
         get_neighbor_labels = get_neighbors_labels_gt
         node_iter = g.get_vertices()
         if use_components:
-            import graph_tool.all as gt # pylint: disable=import-outside-toplevel
+            import graph_tool.all as gt # pylint: disable=import-outside-toplevel # type: ignore
             component_colors,_ = gt.label_components(g)#pylint: disable=unbalanced-tuple-unpacking
             labelings = [np.array(component_colors.get_array())]
         else:
