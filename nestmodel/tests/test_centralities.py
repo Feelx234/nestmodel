@@ -130,6 +130,16 @@ class TestCentralities(unittest.TestCase):
         v_base = to_vec(v_base)
         verify_all(G, v_base, calc_katz_iter)
 
+    def test_pagerank_raises(self):
+        G = nx.Graph()
+        with self.assertRaises(ValueError):
+            calc_pagerank(G)
+
+    def test_pagerank_1_node(self):
+        G = nx.Graph()
+        G.add_node(0)
+        arr = calc_pagerank(G)
+        np.testing.assert_array_equal(arr, [1.0])
 
 
 

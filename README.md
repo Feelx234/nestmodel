@@ -1,7 +1,7 @@
 # Neighborhood Structure Configuration Model
-![Teaser Figure for the Neighborhood Structure Configuration Model](./teaser.png)
+![Teaser Figure for the Neighborhood Structure Configuration Model](https://raw.githubusercontent.com/Feelx234/nestmodel/main/teaser.png)
 
-![build](https://github.com/Feelx234/nestmodel-test/actions/workflows/pythonapp.yml/badge.svg)
+![build](https://github.com/Feelx234/nestmodel/actions/workflows/pythonapp.yml/badge.svg)
 
 Neighborhood Structure Configuration Models (short NeSt-models) allow to generate random graphs that preserved the neighborhood structure of a given graph for arbitrary depth d.
 
@@ -11,8 +11,13 @@ This package provides the implementation as used in our paper.
 # Installation instructions
 You can install this library like any other python package, depending packages are also installed along with it.
 
-
 ### Installing nestmodel
+Nestmodel is available on pypi thus you can simply install it via:
+```
+pip install nestmodel
+```
+
+### Installing nestmodel from source
 ```
 git clone https://github.com/Feelx234/nestmodel.git
 pip install nestmodel

@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name='nestmodel',
-    version='0.1.1',
+    version='0.1.2',
     packages=['nestmodel', 'nestmodel.tests'],
     author='Felix Stamm',
     author_email='felix.stamm@cssh.rwth-aachen.de',

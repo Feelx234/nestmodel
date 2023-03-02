@@ -45,7 +45,7 @@ def calc_pagerank(G, alpha = 0.85, epsilon=0, max_iter=None):
 
     n_nodes = num_nodes(G)
     if n_nodes==0:
-        raise ValueError()
+        raise ValueError("Pagerank undefined for empty graph")
     elif n_nodes==1:
         pagerank_vector = np.array([1.0])
     elif n_nodes == 2:

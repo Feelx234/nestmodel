@@ -8,7 +8,7 @@ import numpy as np
 
 
 
-@njit
+@njit(cache=True)
 def primesfrom2to(n):
     """ Input n>=6, Returns an array of primes, 2 <= p < n
     taken from Stackoverflow
@@ -29,11 +29,11 @@ def primesfrom2to(n):
 
 
 
-@njit
+@njit(cache=True)
 def my_bincount(arr, min_lenght=-1):
     """The same as numpy bincount, but works on unsigned integers as well"""
     if min_lenght <= 0:
-        m=arr.max()
+        m=arr.max() # pragma: no cover
     else:
         m = min_lenght
     out = np.zeros(m+1, dtype=arr.dtype)
@@ -76,7 +76,7 @@ def to_in_neighbors(edges):
 
 
 
-def WL_fast(edges, labels = None, max_iter=201):
+def WL_fast(edges, num_nodes=None, labels = None, max_iter=None):
     """Computes the in-WL very fast for the input edges
     runtime is approximately O(E + log(N)N)
     takes only O(E+N) additional memory
@@ -84,27 +84,34 @@ def WL_fast(edges, labels = None, max_iter=201):
     assert edges.dtype==np.uint32 or edges.dtype==np.uint64
     if not labels is None:
         assert labels.dtype==np.uint32 or labels.dtype==np.uint64
-    edges2 = np.empty_like(edges)
-    edges2[:,0] = edges[:,1]
-    edges2[:,1] = edges[:,0]
-    startings, neighbors, _ = to_in_neighbors(edges2)
-    num_nodes = len(startings)-1
+    if max_iter is None:
+        max_iter = 200
+    if max_iter <=0:
+        raise ValueError("Need at least max_iter/max_depth of 1")
+    if num_nodes is None:
+        num_nodes = int(edges.max()+1)
 
     out = []
     if labels is None:
         labels = np.zeros(num_nodes, dtype=np.uint32)
     else:
         labels = np.array(labels.copy(), dtype=labels.dtype)
-        #print(labels)
         convert_labeling(labels)
-        #print(labels)
 
     out.append(labels.copy())
+    if max_iter == 1:
+        return out
+
+    edges2 = np.empty_like(edges)
+    edges2[:,0] = edges[:,1]
+    edges2[:,1] = edges[:,0]
+    startings, neighbors, _ = to_in_neighbors(edges2)
+
     labelings = _wl_fast2(startings, neighbors, labels, max_iter)
-    #print("AA", labelings)
+
     for labeling in labelings:
         convert_labeling(labeling)
-    #print("BB", labelings)
+
     out.extend(labelings[:-1])
     return out
 
@@ -135,30 +142,35 @@ def injective_combine(labels1, labels2):
 
 
 
-def WL_both(edges, labels = None, max_iter=201):#pyling:disable=invalid-name
+def WL_both(edges, num_nodes=None, labels = None, max_iter = None):#pyling:disable=invalid-name
     """A very simple implementation of WL both
     """
     assert edges.dtype==np.uint32 or edges.dtype==np.uint64
     if not labels is None:
         assert labels.dtype==np.uint32
-    edges2 = np.empty_like(edges)
-    edges2[:,0] = edges[:,1]
-    edges2[:,1] = edges[:,0]
-    startings, neighbors, _ = to_in_neighbors(edges2)
-    startings2, neighbors2, _ = to_in_neighbors(edges)
-
-    num_nodes = len(startings)-1
+    if max_iter is None:
+        max_iter=201 #
+    if num_nodes is None:
+        num_nodes = int(edges.max()+1)
+    if max_iter <=0:
+        raise ValueError("Need at least max_iter/max_depth of 1")
 
     out = []
     if labels is None:
         labels = np.zeros(num_nodes, dtype=np.uint32)
     else:
         labels = np.array(labels.copy(), dtype=labels.dtype)
-        #print(labels)
         convert_labeling(labels)
-        #print(labels)
 
     out.append(labels.copy())
+    if max_iter == 1:
+        return out
+
+    edges2 = np.empty_like(edges)
+    edges2[:,0] = edges[:,1]
+    edges2[:,1] = edges[:,0]
+    startings, neighbors, _ = to_in_neighbors(edges2)
+    startings2, neighbors2, _ = to_in_neighbors(edges)
     last_num_colors = len(np.unique(labels))
     labelings=[]
     for _ in range(max_iter):
@@ -169,10 +181,10 @@ def WL_both(edges, labels = None, max_iter=201):#pyling:disable=invalid-name
         if last_num_colors==num_colors:
             break
         last_num_colors=num_colors
-    #print("AA", labelings)
+
     for labeling in labelings:
         convert_labeling(labeling)
-    #print("BB", labelings)
+
     out.extend(labelings[:-1])
     return out
 
@@ -206,7 +218,7 @@ def convert_labeling(labeling):
 
 
 
-@njit
+@njit(cache=True)
 def is_sorted_fast(vals, order):
     """Checks whether the values in vals are sorted ascedingly when using order"""
     last_val = vals[order[0]]

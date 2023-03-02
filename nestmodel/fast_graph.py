@@ -140,65 +140,63 @@ class FastGraph:
             G.base_partitions = npzfile["base_partitions"]
             G.wl_iterations = npzfile["wl_iterations"]
             G.edges_classes = npzfile["edges_classes"]
-            if "is_mono" in npzfile:
-                G.is_mono = npzfile["is_mono"]
-            else:
-                from nestmodel.fast_rewire import create_mono_from_arrs
-                G.is_mono = []
-                for i in range(npzfile["mono_len"]):
-                    G.is_mono.append(create_mono_from_arrs(npzfile[f'mono{i}_keys'], npzfile[f'mono{i}_values']))
-                G.block_indices = []
-                for i in range(npzfile["block_len"]):
-                    G.block_indices.append(npzfile[f'block_indices{i}'])
+
+            from nestmodel.fast_rewire import create_mono_from_arrs
+            G.is_mono = []
+            for i in range(npzfile["mono_len"]):
+                G.is_mono.append(create_mono_from_arrs(npzfile[f'mono{i}_keys'], npzfile[f'mono{i}_values']))
+            G.block_indices = []
+            for i in range(npzfile["block_len"]):
+                G.block_indices.append(npzfile[f'block_indices{i}'])
             return G
 
 
-    def calc_wl(self, initial_colors=None):
+    def calc_wl(self, initial_colors=None, max_depth=None):
         """Compute the WL colors of this graph using the provided initial colors"""
-        return self._calc_wl(WL_fast, initial_colors)
+        return self._calc_wl(WL_fast, initial_colors, max_depth=max_depth)
 
 
-    def calc_wl_both(self, initial_colors=None):
+    def calc_wl_both(self, initial_colors=None, max_depth=None):
         """Compute the WL partition over both the in and out neighborhood"""
-        return self._calc_wl(WL_both, initial_colors)
+        return self._calc_wl(WL_both, initial_colors, max_depth=max_depth)
 
 
-    def _calc_wl(self, method, initial_colors=None):
+    def _calc_wl(self, method, initial_colors=None, max_depth=None):
         edges = self.edges
         if not self.is_directed:
             edges2 = np.vstack((edges[:,1], edges[:,0])).T
             edges = np.vstack((edges, edges2))
 
         if type(initial_colors).__module__ == np.__name__: # is numpy array
-            return method(edges, labels = initial_colors)
+            return method(edges, self.num_nodes, labels = initial_colors, max_iter=max_depth)
         elif initial_colors is not None and "out_degree" == initial_colors:
-            return method(edges, labels = self.out_degree)
+            return method(edges, self.num_nodes, labels = self.out_degree, max_iter=max_depth)
         else:
-            return method(edges)
+            return method(edges, self.num_nodes, max_iter=max_depth)
 
-    def ensure_base_wl(self, initial_colors=None, both=False):
+    def ensure_base_wl(self, initial_colors=None, both=False, max_depth=None):
         """Compute the base WL partition if they have not yet been computed"""
         if self.base_partitions is None:
-            self.calc_base_wl(initial_colors=initial_colors, both=both)
+            self.calc_base_wl(initial_colors=initial_colors, both=both, max_depth=max_depth)
 
 
-    def calc_base_wl(self, initial_colors=None, both=False):
+    def calc_base_wl(self, initial_colors=None, both=False, max_depth=None):
         """Compute and store the base WL partition"""
         if not self.latest_iteration_rewiring is None:
             raise ValueError("Seems some rewiring already employed, cannot calc base WL")
         if both is False:
-            partitions = self.calc_wl(initial_colors=initial_colors)
+            partitions = self.calc_wl(initial_colors=initial_colors, max_depth=max_depth)
         else:
-            partitions = self.calc_wl_both(initial_colors=initial_colors)
+            partitions = self.calc_wl_both(initial_colors=initial_colors, max_depth=max_depth)
 
         self.base_partitions = np.array(partitions, dtype=np.uint32)
         self.wl_iterations = len(self.base_partitions)
 
 
-    def ensure_edges_prepared(self, initial_colors=None, both=False):
+    def ensure_edges_prepared(self, initial_colors=None, both=False, max_depth=None):
         """Prepare the edges by first ensuring the base WL and then sorting edges by base WL"""
         if self.base_partitions is None:
-            self.ensure_base_wl(initial_colors=initial_colors, both=both)
+            self.ensure_base_wl(initial_colors=initial_colors, both=both, max_depth=max_depth)
         if self.edges_ordered is None:
             self.reset_edges_ordered()
 

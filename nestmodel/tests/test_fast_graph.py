@@ -71,6 +71,7 @@ class TestFastGraph(unittest.TestCase):
         assert_array_equal(G.edges, edges2)
 
 
+
     def test_rewire1_double_edge_2(self):
         edges = np.array([[0,1],[2,3]], dtype=np.uint32)
 
@@ -178,6 +179,38 @@ class TestFastGraph(unittest.TestCase):
         G.rewire(0, method=1, seed=0, r=1)
         assert_array_equal(G.edges, result)
 
+    def test_rewire_limited_depth(self):
+        G = FastGraph(np.array([(0,2), (1,2)], dtype=np.uint32), is_directed=False)
+        G.ensure_edges_prepared(max_depth=1)
+        self.assertEqual(G.wl_iterations, 1)
+
+    def test_wl_limited_depth(self):
+        edges = np.array([(0,2), (1,2), (2,3)], dtype=np.uint32)
+        G = FastGraph(edges, is_directed=False)
+        with self.assertRaises(ValueError):
+            G.ensure_edges_prepared(max_depth=0)
+
+        G = FastGraph(edges, is_directed=False)
+        G.ensure_edges_prepared(max_depth=1)
+        self.assertEqual(G.wl_iterations, 1)
+
+        G = FastGraph(edges, is_directed=False)
+        G.ensure_edges_prepared(max_depth=2)
+        self.assertEqual(G.wl_iterations, 2)
+
+    def test_wl_limited_depth_both(self):
+        edges = np.array([(0,2), (1,2), (2,3)], dtype=np.uint32)
+        G = FastGraph(edges, is_directed=False)
+        with self.assertRaises(ValueError):
+            G.ensure_edges_prepared(max_depth=0, both=True)
+
+        G = FastGraph(edges, is_directed=False)
+        G.ensure_edges_prepared(max_depth=1, both=True)
+        self.assertEqual(G.wl_iterations, 1)
+
+        G = FastGraph(edges, is_directed=False)
+        G.ensure_edges_prepared(max_depth=2, both=True)
+        self.assertEqual(G.wl_iterations, 2)
 
 from nestmodel.tests.utils_for_test import restore_numba, remove_numba
 

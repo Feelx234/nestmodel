@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 
 #from nestmodel.load_datasets import *
-from nestmodel.fast_wl import WL_fast, to_in_neighbors, convert_labeling
+from nestmodel.fast_wl import WL_fast, to_in_neighbors, convert_labeling, my_bincount
 
 
 
@@ -53,7 +53,7 @@ class TestFastWLMethods(unittest.TestCase):
         n=8
 
 
-        out = WL_fast(create_line_graph(n))
+        out = WL_fast(create_line_graph(n), n)
         self.assertIsInstance(out, list)
         self.assertEqual(len(out), 4)
         arr0, arr1, arr2, arr3 = out # pylint: disable=unbalanced-tuple-unpacking
@@ -62,11 +62,13 @@ class TestFastWLMethods(unittest.TestCase):
         np.testing.assert_array_equal(arr1, [0, 1, 1, 1, 1, 1, 1, 0])
         np.testing.assert_array_equal(arr2, [0, 1, 2, 2, 2, 2, 1, 0])
         np.testing.assert_array_equal(arr3, [0, 1, 2, 3, 3, 2, 1, 0])
+        out2 = WL_fast(create_line_graph(n)) # no size argument
+        np.testing.assert_array_equal(out, out2)
 
     def test_wl_line2(self):
         n=7
 
-        out = WL_fast(create_line_graph(n))
+        out = WL_fast(create_line_graph(n), n)
         self.assertIsInstance(out, list)
         self.assertEqual(len(out), 4)
         arr0, arr1, arr2, arr3 = out # pylint: disable=unbalanced-tuple-unpacking
@@ -76,11 +78,14 @@ class TestFastWLMethods(unittest.TestCase):
         np.testing.assert_array_equal(arr2, [0, 1, 2, 2, 2, 1, 0])
         np.testing.assert_array_equal(arr3, [0, 1, 2, 3, 2, 1, 0])
 
+        out2 = WL_fast(create_line_graph(n)) # no size argument
+        np.testing.assert_array_equal(out, out2)
+
     def test_wl_line3(self):
         """Now with imperfection"""
         n=7
         starting_labels = np.array([0,0,0,100,0,0,0], dtype=np.uint32)
-        out = WL_fast(create_line_graph(n), starting_labels)
+        out = WL_fast(create_line_graph(n), n, starting_labels)
 
         self.assertIsInstance(out, list)
         self.assertEqual(len(out),2)
@@ -112,7 +117,7 @@ class TestFastWLMethods(unittest.TestCase):
                 [8, 5],
                 [7, 6]], dtype=np.uint32)
 
-        out = WL_fast(edges)
+        out = WL_fast(edges, 9)
         self.assertIsInstance(out, list)
         self.assertEqual(len(out),6)
 
@@ -124,6 +129,11 @@ class TestFastWLMethods(unittest.TestCase):
                    [0, 1, 2, 3, 4, 4, 5, 5, 6]]
         for arr, arr_expected in zip(out, results):
             np.testing.assert_array_equal(arr, arr_expected)
+
+    def test_bincount(self):
+        arr = np.array([2,1,0,0], dtype=np.uint32)
+        out = my_bincount(arr)
+        np.testing.assert_array_equal(out, [2,1,1])
 
 
 

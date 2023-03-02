@@ -133,7 +133,7 @@ def assign_node_labels(labels, edges, out, is_directed):
         out[i,0]=labels[node_0]
         out[i,1]=labels[node_1]
 
-@njit
+@njit(cache=True)
 def _switch_edges_according_to_labels(edges, labels, unprocessed):
     """Switches endpoints of edges u-v such that for labels[u] <= labels[v]
     and removes edges with labels[u] != labels[v] from unprocessed
@@ -438,7 +438,7 @@ def _rewire_bipartite_large(edges, n_rewire, is_directed):
 
 
 
-@njit
+@njit(cache=True)
 def triangle_flip_large(edges, neigh):
     """
 
