@@ -2,6 +2,8 @@
 ![Teaser Figure for the Neighborhood Structure Configuration Model](https://raw.githubusercontent.com/Feelx234/nestmodel/main/teaser.png)
 
 ![build](https://github.com/Feelx234/nestmodel/actions/workflows/pythonapp.yml/badge.svg)
+[![Published at The Web Conference](https://img.shields.io/badge/Published_at_-_ACM_WebConf_-blue)](https://doi.org/10.1145/3543507.3583266)
+[![arXiv:2210.06843](https://img.shields.io/badge/arXiv-2210.06843-b31b1b.svg?logo=arxiv)](https://arxiv.org/abs/2210.06843)
 
 Neighborhood Structure Configuration Models (short NeSt-models) allow to generate random graphs that preserved the neighborhood structure of a given graph for arbitrary depth d.
 
