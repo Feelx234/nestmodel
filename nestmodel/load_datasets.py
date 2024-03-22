@@ -4,6 +4,25 @@ import pandas as pd
 from nestmodel.utils import graph_tool_from_edges
 from nestmodel.fast_graph import FastGraph
 
+
+
+def get_dataset_folder(should_assert=True):
+    """Get a link to the dataset folder"""
+
+    path = Path(__file__).parent.absolute()
+
+    if str(path.name) == "scripts":
+        path = path.parent
+    if str(path.name) == "nestmodel":
+        path = path.parent
+    if str(path.name) == "src":
+        path = path.parent
+    if str(path.name)!="datasets":
+        path = path/"datasets"
+    if should_assert:
+        assert path.is_dir()
+    return path
+
 def relabel_edges(edges):
     """relabels nodes such that they start from 0 consecutively"""
     unique = np.unique(edges.ravel())
@@ -167,7 +186,7 @@ def load_gt_dataset_cached(datasets_dir, dataset_name, verbosity=0, force_reload
     if cache_file.is_file() and not force_reload:
         if verbosity>1:
             print("loading cached")
-        import graph_tool.all as gt # pylint: disable=import-outside-toplevel # type: ignore
+        import graph_tool.all as gt # pylint: disable=import-outside-toplevel, import-error # type: ignore
         return gt.load_graph(str(cache_file.absolute()))
     else:
         if verbosity>1:

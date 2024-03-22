@@ -212,6 +212,52 @@ class TestFastGraph(unittest.TestCase):
         G.ensure_edges_prepared(max_depth=2, both=True)
         self.assertEqual(G.wl_iterations, 2)
 
+    def test_source_only_rewiring(self):
+        G = FastGraph(np.array([(0,1)], dtype=np.uint32), is_directed=True, num_nodes=3)
+        G.ensure_edges_prepared(sorting_strategy="source")
+        G.rewire(0, method=1, seed=3, r=1, source_only=True)
+        np.testing.assert_array_equal(G.edges, [[2, 1]])
+
+    def test_source_only_rewiring_parallel(self):
+        G = FastGraph(np.array([(0,1)], dtype=np.uint32), is_directed=True, num_nodes=3)
+        G.ensure_edges_prepared(sorting_strategy="source")
+        G.rewire(0, method=1, seed=3, r=1, source_only=True, parallel=True)
+        np.testing.assert_array_equal(G.edges, [[2, 1]])
+
+
+    def test_prrewiring_only_rewiring(self):
+        G = FastGraph(np.array([(0,2), (0,3), (2,3), (1,4), (6,7), (1,5), (0,6), (0,7), (1,8), (1,9)], dtype=np.uint32), is_directed=False, num_nodes=10)
+        G.ensure_edges_prepared(sorting_strategy="source")
+        G.rewire(0, method=1, seed=3, r=1)
+        np.testing.assert_array_equal(G.block_indices[0], [[0, 10]])
+        np.testing.assert_array_equal(G.block_indices[1], [[0, 8], [8,10]])
+        np.testing.assert_array_equal(G.block_indices[2], [[0, 4], [4,8], [8,10]])
+
+
+    def test_prrewiring_only_rewiring2(self):
+        """
+        From the graph
+        0 -> 2
+        1 -> 3
+        to the graph
+        0 -> 2
+        1 -> 3
+        using initial colors to make node 2 and 3 different
+        which is only valid with the source only strategy
+        """
+        G = FastGraph(np.array([(0,2), (1,3), ], dtype=np.uint32), is_directed=True, num_nodes=4)
+
+        G.ensure_edges_prepared(initial_colors=np.array([0,0,1,2], np.uint32), sorting_strategy="source")
+        G.rewire(0, method=1, seed=5, r=1)
+        np.testing.assert_array_equal(G.edges, [[0, 3], [1, 2]])
+
+    def test_prrewiring_only_rewiring2_parallel(self):
+        G = FastGraph(np.array([(0,2), (1,3), ], dtype=np.uint32), is_directed=True, num_nodes=4)
+
+        G.ensure_edges_prepared(initial_colors=np.array([0,0,1,2], np.uint32), sorting_strategy="source")
+        G.rewire(0, method=1, seed=5, r=1, parallel=True)
+        np.testing.assert_array_equal(G.edges, [[0, 3], [1, 2]])
+
 from nestmodel.tests.utils_for_test import restore_numba, remove_numba
 
 class TestFastGraphNonCompiled(TestFastGraph):

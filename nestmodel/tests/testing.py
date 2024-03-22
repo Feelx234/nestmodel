@@ -24,11 +24,11 @@ def check_colorings_agree(coloring1, coloring2):
     for a,b in zip(coloring1, coloring2):
         d_a[a].add(b)
         d_b[b].add(a)
-    assert len(d_a) == len(d_b)
+    assert len(d_a) == len(d_b), f"Number of colors disagrees {len(d_a)}!={len(d_b)}, {coloring1}, {coloring2}"
     for key, value in d_a.items():
-        assert len(value)==1, str(key)
+        assert len(value)==1, f"found multiple matches for {key} i.e. {value},  {coloring1}, {coloring2}"
     for key, value in d_b.items():
-        assert len(value)==1, str(key)
+        assert len(value)==1, f"found multiple matches for {key} i.e. {value},  {coloring1}, {coloring2}"
 
 def check_color_histograms_agree(hist1, hist2):
     """Assert that two color histograms agree"""

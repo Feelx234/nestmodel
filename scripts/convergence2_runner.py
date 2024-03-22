@@ -1,16 +1,38 @@
 import os
 from pathlib import Path
 import subprocess
+import sys
 
 
+this_file = Path(__file__)
+this_folder = this_file.parent
+main_folder = this_file.parent.parent
 
-
+print(main_folder)
+if sys.platform == 'win32':
+    import subprocess
+    result = subprocess.run("where.exe python", capture_output=True, text=True)
+    python_path = result.stdout.split("\n")[0]
 
 import io
 import selectors
 import subprocess
-import sys
+
 def capture_subprocess_output(subprocess_args):
+    if sys.platform == 'win32':
+        subprocess_args = subprocess_args.replace("python", python_path)
+        print(">>>", subprocess_args)
+        buf = io.StringIO()
+        with subprocess.Popen(subprocess_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=this_folder) as process:
+            for c in iter(lambda: process.stdout.read(1), b""):
+                sys.stdout.buffer.write(c)
+                sys.stdout.flush()
+                buf.write(c.decode("utf-8"))
+        output = buf.getvalue()
+        buf.close()
+            #for line in process.stdout:
+            #    print(line.decode('utf8'))
+        return None, output
     # Start subprocess
     # bufsize = 1 means output is line buffered
     # universal_newlines = True is required for line buffering
@@ -59,6 +81,13 @@ def capture_subprocess_output(subprocess_args):
 
 
 
+def encode_str(s):
+    if sys.platform == 'win32':
+        print(s)
+        return s.replace("'", r'\"').replace(" ", "")
+    else:
+        return s.replace(" ", "").replace("'", r"\'")
+
 
 
 
@@ -77,47 +106,50 @@ if "-s" in sys.argv:
     datasets=[]
 folder = Path(".")
 outfile="convergence2_run_results.txt"
-
-for suffix in to_run:
-    file_name = Path("convergence2_"+suffix+".ipynb")
-    file = folder/file_name
-    if not file.is_file():
-        folder = Path("./scripts")
+convert=True
+if convert:
+    for suffix in to_run:
+        file_name = Path("convergence2_"+suffix+".ipynb")
         file = folder/file_name
         if not file.is_file():
-            print("did not find: "+str(file))
-            continue
-    command = "jupyter nbconvert --to script "+str(file)
-    print(command)
-    os.system(command)
-print("conversion done!")
+            folder = Path("./scripts")
+            file = folder/file_name
+            if not file.is_file():
+                print("did not find: "+str(file))
+                continue
+        command = "jupyter nbconvert --to script "+str(file)
+        print(command)
+        os.system(command)
+    print("conversion done!")
 
 for suffix in to_run:
     print("<<< testing: "+suffix +" >>>")
-    python_name = folder/Path("convergence2_"+suffix+".py")
+    python_name = this_folder/Path("convergence2_"+suffix+".py")
 
-    command = "python "+str(python_name)+" datasets "+str(["karate"]).replace(" ", "").replace("'", r"\'")+ " n 1"
-    os.system(command)
+    command = "python "+str(python_name)+" datasets "+encode_str(repr(["karate"]))+ " n 1"
+    print(command)
+    #os.system(command)
+    _, result = capture_subprocess_output(command)
 print("tests done!")
 
 long_result = False
+if True:
+    for suffix in to_run:
+        if long_result:
+            print("\n\n")
+        print("<<< "+suffix +" >>>")
+        python_name = folder/Path("convergence2_"+suffix+".py")
 
-for suffix in to_run:
-    if long_result:
-        print("\n\n")
-    print("<<< "+suffix +" >>>")
-    python_name = folder/Path("convergence2_"+suffix+".py")
-
-    command = "python "+str(python_name)+" datasets "+str(datasets).replace(" ", "").replace("'", r"\'")
-    print(command)
-    _, result = capture_subprocess_output(command)
-    #subprocess.run([command], capture_output=True, text=True, shell=True).stdout
-    #print(result)
-    long_result= result.count('\n') >5
-    res = re.search(r"\d\d\d\d_\d\d_\d\d__\d\d_\d\d_\d\d", result)
-    if res:
-        with open(folder/outfile, "a", encoding="utf-8") as f:
-            f.write(suffix+ "\t"+str(res.group())+"\n")
-    else:
-        print("<<< no output file produced")
-#print(repr(lines))
+        command = "python "+str(python_name)+" datasets "+encode_str(repr(datasets))
+        print(command)
+        _, result = capture_subprocess_output(command)
+        #subprocess.run([command], capture_output=True, text=True, shell=True).stdout
+        #print(result)
+        long_result= result.count('\n') >5
+        res = re.search(r"\d\d\d\d_\d\d_\d\d__\d\d_\d\d_\d\d", result)
+        if res:
+            with open(folder/outfile, "a", encoding="utf-8") as f:
+                f.write(suffix+ "\t"+str(res.group())+"\n")
+        else:
+            print("<<< no output file produced")
+    #print(repr(lines))

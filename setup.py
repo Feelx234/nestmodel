@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name='nestmodel',
-    version='0.1.2',
+    version='0.2.1',
     packages=['nestmodel', 'nestmodel.tests'],
     author='Felix Stamm',
     author_email='felix.stamm@cssh.rwth-aachen.de',
@@ -13,7 +13,7 @@ setup(
     long_description=long_description,      # Long description read from the the readme file
     long_description_content_type="text/markdown",
     install_requires=[
-              'pandas', 'scipy', 'numpy', 'matplotlib', 'numba', 'networkx', 'brokenaxes', 'nbconvert', 'tqdm'
+              'pandas', 'scipy', 'numpy', 'matplotlib', 'numba', 'networkx', 'brokenaxes', 'nbconvert', 'tqdm', 'threadpoolctl'
           ],
     python_requires='>=3.8'
 )

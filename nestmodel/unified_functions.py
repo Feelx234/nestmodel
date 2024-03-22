@@ -57,7 +57,7 @@ def get_sparse_adjacency(G):
     elif is_fastgraph_str(G_str):
         return G.to_coo()
     elif is_graphtool_str(G_str): # pragma: gt no cover
-        from graph_tool.spectral import adjacency # pylint: disable=import-outside-toplevel # type: ignore
+        from graph_tool.spectral import adjacency # pylint: disable=import-outside-toplevel, import-error # type: ignore
         return adjacency(G).T
     else:
         raise NotImplementedError()
@@ -85,12 +85,13 @@ def _nx_dict_to_array(d):
 
 
 def to_fast_graph(G):
-    from nestmodel.fast_graph import FastGraph
+    """Attempts to convert any graph object into a FastGraph"""
+    from nestmodel.fast_graph import FastGraph # pylint:disable=import-outside-toplevel
     G_str = repr(G)
     if is_networkx_str(G_str):
         return FastGraph.from_nx(G)
     elif is_fastgraph_str(G_str):
-        from copy import copy
+        from copy import copy # pylint:disable=import-outside-toplevel
         return copy(G)
     elif is_graphtool_str(G_str): # pragma: gt no cover
         return FastGraph.from_gt(G)

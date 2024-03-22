@@ -1,6 +1,7 @@
 /datasets/*
 /scripts/images
 /scripts/results/
+/images/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

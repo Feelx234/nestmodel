@@ -1,11 +1,21 @@
 from copy import copy
 import numpy as np
+import warnings
 from nestmodel.utils import networkx_from_edges, graph_tool_from_edges, calc_color_histogram, switch_in_out, make_directed
 from nestmodel.fast_wl import WL_fast, WL_both
 
-from nestmodel.fast_rewire import rewire_fast, sort_edges, get_block_indices
+from nestmodel.fast_rewire import rewire_fast, dir_rewire_source_only_fast, sort_edges, get_block_indices
 
-
+def ensure_is_numpy_or_none(arr, dtype=np.int64):
+    """Validates that sth is numpy array of sth iterable"""
+    if arr is None:
+        return arr
+    if isinstance(arr, (tuple, list)):
+        return np.array(arr, dtype=dtype)
+    if isinstance(arr, np.ndarray):
+        return arr
+    else:
+        raise ValueError(f"Unexpected input type received {type(arr)}. {arr}")
 
 
 class FastGraph:
@@ -30,6 +40,7 @@ class FastGraph:
         self.dead_arr = None
         self.is_mono = None
         self.block_indices = None
+        self.block_dead = None
 
         self.out_degree = np.array(np.bincount(edges[:,0].ravel(), minlength=self.num_nodes), dtype=np.uint32)
         self.in_degree =  np.array(np.bincount(edges[:,1].ravel(), minlength=self.num_nodes), dtype=np.uint32)
@@ -49,6 +60,7 @@ class FastGraph:
             self.in_degree=self.out_degree
             self.out_dead_ends = np.nonzero(self.out_degree==0)[0]
             self.in_dead_ends = self.out_dead_ends
+        self.sorting_strategy = None
 
 
 
@@ -72,18 +84,31 @@ class FastGraph:
 
 
     @staticmethod
-    def from_nx(G):
-        """Creates a FastGraph object from a graphtool graph"""
-        edges = np.array(G.edges, dtype=np.uint32)
-        is_directed = G.is_directed()
-        return FastGraph(edges, is_directed)
+    def from_nx(G, allow_advanced_node_labels=False):
+        """Creates a FastGraph object from a networkx graph
 
-    @staticmethod
-    def switch_directions(G):
+        if the networkx graph has non integer node labes you need to set allow_advanced_node_labels=True
+
+        """
+        unmapping = None
+        if allow_advanced_node_labels:
+            mapping = {node: index for index, node in enumerate(G.nodes)}
+            unmapping = {value: key for key, value in mapping.items()}
+            edges_nx = [(mapping[u], mapping[v]) for u, v in G.edges]
+        else:
+            edges_nx = G.edges
+        edges = np.array(edges_nx, dtype=np.uint32)
+        is_directed = G.is_directed()
+
+        if unmapping is None:
+            return FastGraph(edges, is_directed)
+        else:
+            return FastGraph(edges, is_directed), unmapping
+    def switch_directions(self):
         """Creates a FastGraph object from a graphtool graph"""
-        edges = switch_in_out(G.edges)
-        is_directed = G.is_directed
-        return FastGraph(edges, is_directed)
+        edges = switch_in_out(self.edges)
+        is_directed = self.is_directed
+        return FastGraph(edges, is_directed, num_nodes=self.num_nodes)
 
 
     def to_gt(self):
@@ -92,10 +117,10 @@ class FastGraph:
         return graph_tool_from_edges(edges, self.num_nodes, self.is_directed)
 
 
-    def to_nx(self):
+    def to_nx(self, is_multi=False):
         """Convert the graph to a networkx graph"""
         edges = self.edges
-        return networkx_from_edges(edges, self.num_nodes, self.is_directed)
+        return networkx_from_edges(edges, self.num_nodes, self.is_directed, is_multi=is_multi)
 
 
 
@@ -132,6 +157,7 @@ class FastGraph:
 
     @staticmethod
     def load_npz(file):
+        """Load a FastGraph object from a npz file"""
         npzfile = np.load(file)
         if len(npzfile) == 2:
             return FastGraph(npzfile["edges"], bool(npzfile["is_directed"]))
@@ -166,10 +192,10 @@ class FastGraph:
         if not self.is_directed:
             edges2 = np.vstack((edges[:,1], edges[:,0])).T
             edges = np.vstack((edges, edges2))
-
         if type(initial_colors).__module__ == np.__name__: # is numpy array
             return method(edges, self.num_nodes, labels = initial_colors, max_iter=max_depth)
-        elif initial_colors is not None and "out_degree" == initial_colors:
+        elif isinstance(initial_colors, str):
+            assert initial_colors in ("out-degree", "out_degree")
             return method(edges, self.num_nodes, labels = self.out_degree, max_iter=max_depth)
         else:
             return method(edges, self.num_nodes, max_iter=max_depth)
@@ -193,18 +219,19 @@ class FastGraph:
         self.wl_iterations = len(self.base_partitions)
 
 
-    def ensure_edges_prepared(self, initial_colors=None, both=False, max_depth=None):
+    def ensure_edges_prepared(self, initial_colors=None, both=False, max_depth=None, sorting_strategy=None):
         """Prepare the edges by first ensuring the base WL and then sorting edges by base WL"""
+        initial_colors = ensure_is_numpy_or_none(initial_colors, dtype=np.uint32)
         if self.base_partitions is None:
             self.ensure_base_wl(initial_colors=initial_colors, both=both, max_depth=max_depth)
         if self.edges_ordered is None:
-            self.reset_edges_ordered()
+            self.reset_edges_ordered(sorting_strategy)
 
 
-    def reset_edges_ordered(self):
+    def reset_edges_ordered(self, sorting_strategy=None):
         """Sort edges according to the partitions"""
-        self.edges_ordered, self.edges_classes, self.dead_arr, self.is_mono = sort_edges(self._edges, self.base_partitions, self.is_directed)
-        self.block_indices = get_block_indices(self.edges_classes, self.dead_arr)
+        self.edges_ordered, self.edges_classes, self.dead_arr, self.is_mono, self.sorting_strategy = sort_edges(self._edges, self.base_partitions, self.is_directed, sorting_strategy)
+        self.block_indices, self.block_dead = get_block_indices(self.edges_classes, self.dead_arr)
 
 
     def copy(self):
@@ -225,7 +252,7 @@ class FastGraph:
         assert method in (1, 2)
         if kwargs is not None:
             for key in kwargs:
-                assert key in ("seed", "n_rewire", "r", "parallel")
+                assert key in ("seed", "n_rewire", "r", "parallel", "source_only"), "Invalid keyword provided {key}"
         self.latest_iteration_rewiring = depth
 
         self.ensure_edges_prepared()
@@ -238,14 +265,26 @@ class FastGraph:
             seed = kwargs.get("seed", None)
             r = kwargs.get("r", 1)
             parallel = kwargs.get("parallel", False)
-            rewire_fast(self.edges_ordered,
-                                self.edges_classes[:,depth],
-                                self.is_mono[depth],
-                                self.block_indices[depth],
-                                self.is_directed,
-                                seed=seed,
-                                num_flip_attempts_in=r,
-                                parallel=parallel)
+            source_only = kwargs.get("source_only", False)
+            if self.is_directed and source_only:
+                if self.sorting_strategy != "source":
+                    warnings.warn(message=f"source only rewiring should be performed but sorting strategy is {self.sorting_strategy}!=source."+
+                                  " Dubious behaviour expected. Use sorting_strategy='source' when calling .ensure_edges_prepared", category=RuntimeWarning)
+                dir_rewire_source_only_fast(self.edges_ordered,
+                                            self.base_partitions[depth],
+                                            self.block_indices[depth],
+                                            seed=seed,
+                                            num_flip_attempts_in=r,
+                                            parallel=parallel)
+            else:
+                rewire_fast(self.edges_ordered,
+                                    self.edges_classes[:,depth],
+                                    self.is_mono[depth],
+                                    self.block_indices[depth][np.logical_not(self.block_dead[depth]),:],
+                                    self.is_directed,
+                                    seed=seed,
+                                    num_flip_attempts_in=r,
+                                    parallel=parallel)
             res = None
         elif method == 2:
             from nestmodel.fast_rewire2 import fg_rewire_nest  # pylint: disable=import-outside-toplevel

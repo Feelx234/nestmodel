@@ -9,7 +9,7 @@ from numba import njit
 def nx_to_gt(G, verbosity=0):
     """Convert a networkx graph G into a graph-tool graph"""
 
-    import graph_tool.all as gt # type: ignore
+    import graph_tool.all as gt # pylint:disable=import-error; # type: ignore
     if verbosity>2:
         print(repr(G), len(G.nodes), len(G.edges))
     if verbosity>3:
@@ -33,7 +33,7 @@ def nx_to_gt(G, verbosity=0):
 
 def graph_tool_from_edges(edges, size, is_directed):
     """Create a new graph-tool graph from an edge list"""
-    import graph_tool.all as gt # type: ignore
+    import graph_tool.all as gt # pylint:disable=import-error; # type: ignore
     if size is None:
         unique = np.unique(edges.flatten())
         assert unique[0]==0, "expecting to start from 0 " + str(unique[:10])
@@ -44,7 +44,7 @@ def graph_tool_from_edges(edges, size, is_directed):
     return graph
 
 
-def networkx_from_edges(edges, size, is_directed):
+def networkx_from_edges(edges, size, is_directed, is_multi=False):
     """Create a networkx graph from an edge list"""
     import networkx as nx
     if size is None:
@@ -52,9 +52,15 @@ def networkx_from_edges(edges, size, is_directed):
         assert unique[0]==0, "expecting to start from 0 " + str(unique[:10])
         size = len(unique)
     if is_directed:
-        G = nx.DiGraph()
+        if is_multi:
+            G = nx.MultiDiGraph()
+        else:
+            G = nx.DiGraph()
     else:
-        G = nx.Graph()
+        if is_multi:
+            G = nx.MultiGraph()
+        else:
+            G = nx.Graph()
     G.add_nodes_from(list(range(size)))
     G.add_edges_from(edges)
     return G
@@ -271,3 +277,60 @@ def switch_in_out(edges):
     edges_tmp[:,0]=edges[:,1]
     edges_tmp[:,1]=edges[:,0]
     return edges_tmp
+
+
+@njit(cache=True)
+def find_all_cycles(perm):
+    """Find all cycles in the permutation perm
+
+    The cycles are returned as two arrays cycle_arr and lengths
+    lengths[i] specifies the cummulate length of the first i cycles found
+    e.g. if lenghts = [2,5,6]
+    then three cycles were found, the first is of length two, the second of length 3 the last of length 1
+    the elements in array cycle_arr at position 0 through 1 inclusive belong to one cylce,
+        the elements at position 2 through 4 inclusive belong to the second cycle and
+        the element at position 5 is its own cycle
+    """
+    n = len(perm)
+    cycle_arr = np.empty(n,dtype=perm.dtype)
+    cycle_lengths = np.empty(n,dtype=perm.dtype)
+    num_cycles = 0
+    seen = np.zeros(n, dtype=np.bool_)
+    length_cycle=0
+    for start in range(n):
+        if seen[start]:
+            continue
+        current_pos = start
+        #if perm[current_pos]==start:
+        #    continue
+        while True:
+            seen[current_pos]=True
+            cycle_arr[length_cycle]=current_pos
+            length_cycle+=1
+            current_pos = perm[current_pos]
+            if current_pos == start:
+                break
+        cycle_lengths[num_cycles] = length_cycle
+        num_cycles+=1
+    return cycle_arr, cycle_lengths[0:num_cycles]
+
+
+@njit(cache=True)
+def inplace_reorder_last_axis(arr, order):
+    """Reorder the two dimensional array arr along the second axis according to order
+
+    The reordering happens inplace (almost)
+    For an array of shape m,n we need O(n) additional memory
+    """
+    m,n = arr.shape
+    cycles, lengths = find_all_cycles(order)
+    tmp = arr[0,0] # make sure variable persists throughout loops
+    start = 0 # make sure variable persists throughout loops
+    for i in range(m):
+        start = 0
+        for stop in lengths:
+            tmp = arr[i, cycles[start]]
+            for cycle_index in range(start, stop-1):
+                arr[i,cycles[cycle_index]] = arr[i,cycles[cycle_index+1]]
+            arr[i, cycles[stop-1]] = tmp
+            start=stop

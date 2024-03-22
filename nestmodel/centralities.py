@@ -121,7 +121,7 @@ def calc_hits(G,  *, epsilon=0, max_iter=None):
 
 
 def calc_katz(G, alpha=0.1, epsilon=0, max_iter=None):
-    """Returns the hits scores of the current graph"""
+    """Returns the katz scores of the current graph"""
     from scipy.sparse.linalg import spsolve # pylint: disable=import-outside-toplevel
     from scipy.sparse import identity
     A = get_adjacency_switched(G)
@@ -135,7 +135,7 @@ def calc_katz(G, alpha=0.1, epsilon=0, max_iter=None):
 
 
 def calc_katz_iter(G, alpha=0.1, epsilon=1e-15, max_iter=100):
-    """Returns the hits scores of the current graph"""
+    """Returns the katz scores of the current graph"""
     A = get_adjacency_switched(G).T
     n = num_nodes(G)
     beta=np.ones(n)
