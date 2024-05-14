@@ -20,6 +20,8 @@ def is_fastgraph_str(G_str):
     """Checks whether a repr string is from a fastgraph Graph"""
     if G_str.startswith("<nestmodel.fast_graph.FastGraph "):
         return True
+    if G_str.startswith("<tnestmodel.temp_fast_graph.MappedGraph "):
+        return True
     return False
 
 

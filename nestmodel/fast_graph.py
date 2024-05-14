@@ -134,6 +134,16 @@ class FastGraph:
         return coo_matrix((np.ones(edges.shape[0]), (edges[:,0], edges[:,1])), shape = (self.num_nodes, self.num_nodes))
 
 
+    def to_csr(self):
+        """Returns a sparse coo-matrix representation of the graph"""
+        from scipy.sparse import csr_matrix # pylint: disable=import-outside-toplevel
+        edges = self.edges
+        if not self.is_directed:
+            edges = make_directed(edges)
+
+        return csr_matrix((np.ones(edges.shape[0]), (edges[:,0], edges[:,1])), shape = (self.num_nodes, self.num_nodes))
+
+
     def save_npz(self, outfile, include_wl=False):
         """Save the FastGraph object as .npz"""
         if not include_wl:

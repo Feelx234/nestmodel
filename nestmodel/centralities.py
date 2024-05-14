@@ -134,17 +134,18 @@ def calc_katz(G, alpha=0.1, epsilon=0, max_iter=None):
     return katz
 
 
-def calc_katz_iter(G, alpha=0.1, epsilon=1e-15, max_iter=100):
+def calc_katz_iter(G, alpha=0.1, epsilon=1e-15, max_iter=100, beta=None):
     """Returns the katz scores of the current graph"""
     A = get_adjacency_switched(G).T
     n = num_nodes(G)
-    beta=np.ones(n)
-    v=np.ones(n)
-    v_old=np.ones(n)
+    if beta is None:
+        beta=np.ones(n)
+    v_old=beta.copy()
+    v=beta.copy()
     converged=False
     for i in range(max_iter):
         v = alpha*A@v_old + beta
-        if np.sum(np.abs(v- v_old))/n <epsilon:
+        if np.sum(np.abs(v- v_old))/n < epsilon:
             converged=True
             break
         v_old[:]=v[:]
