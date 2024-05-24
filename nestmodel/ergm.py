@@ -156,43 +156,6 @@ def edge_flip_ergm_pagerank_dict(edge_dict, n, target_p, n_steps, phi, seed):
     return p, ratio
 
 
-def Gnp_row_first(n, p, seed=0):
-    """Generates a random graph drawn from the Gnp ensemble"""
-    _set_seed(seed=seed)
-    return _Gnp_row_first(n, p)
-
-@njit(cache=True)
-def _Gnp_row_first(n, p):
-    """Generates a random graph drawn from the Gnp ensemble"""
-    approx = int(n*(n-1)*p)
-    E=np.empty((approx, 2), dtype=np.uint32)
-
-    x = 0
-    y = 0
-    k = 1
-    agg = 0
-    upper_bound = ((n)*(n-1))//2
-    i = 0
-    while True:
-        k = np.random.geometric(p)
-        x += k
-        agg += k
-        if agg > upper_bound:
-            break
-        while x >= n:
-            x+=y+2-n
-            y+=1
-        E[i,0]=y
-        E[i,1]=x
-
-        i+=1
-        if i >= len(E):
-            E2 = np.empty((len(E)+approx,2), dtype=np.uint32)
-            E2[:len(E)] = E[:]
-            E = E2
-    return E[:i,:]
-
-
 @njit(cache=True)
 def _set_seed(seed):
     """Set the need. This needs to be done within numba @njit function"""
