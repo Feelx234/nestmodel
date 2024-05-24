@@ -135,7 +135,7 @@ class FastGraph:
 
 
     def to_csr(self):
-        """Returns a sparse coo-matrix representation of the graph"""
+        """Returns a sparse csr-matrix representation of the graph"""
         from scipy.sparse import csr_matrix # pylint: disable=import-outside-toplevel
         edges = self.edges
         if not self.is_directed:
