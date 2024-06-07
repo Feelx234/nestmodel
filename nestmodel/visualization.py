@@ -136,7 +136,7 @@ def get_familiy_node_colors_for_partition(partitions, depth, strength):
     colors = partitions[depth]
     num_nodes = len(partitions[0])
     if depth==0 and np.all(color_arr == color_arr[0]):
-        colors="gray"
+        colors=["gray" for _ in range(num_nodes)]
     else:
         colors_map = {
                 (0,): '#a2cffe',  #  turquoise   '#AFEEEE',
