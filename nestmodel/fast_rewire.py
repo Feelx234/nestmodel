@@ -98,7 +98,7 @@ def get_edge_id1(edge_with_node_labels, order):
 @njit(cache=True)
 def _get_edge_id(edge_with_node_labels, order):
     """Compute labels starting from 0 consecutively """
-    out = np.empty(len(edge_with_node_labels), dtype=np.uint32)
+    out = np.empty(len(edge_with_node_labels), dtype=np.int32)
     last_label_0 = edge_with_node_labels[order[0],0]
     last_label_1 = edge_with_node_labels[order[0],1]
 
@@ -127,7 +127,7 @@ def _get_edge_id(edge_with_node_labels, order):
 def get_edge_id_sourceonly(source_labels, order):
     """Compute labels starting from 0 consecutively """
 
-    out = np.empty(len(order), dtype=np.uint32)
+    out = np.empty(len(order), dtype=np.int32)
     last_label_source = source_labels[order[0]]
 
 
@@ -279,7 +279,7 @@ def sort_edges_sourceonly(edges, labelings, is_directed):
         edges_classes.append(edge_class)
         is_mono.append(mono)
 
-    dead_indicator = np.array([np.zeros(num_edges, dtype=np.uint32) for _ in range(labelings.shape[0])])
+    dead_indicator = np.array([np.zeros(num_edges, dtype=np.int32) for _ in range(labelings.shape[0])])
 
     # create alternating array of edge classes and dead idicator
     alternating_list = list(chain.from_iterable(zip(edges_classes, dead_indicator)))
@@ -928,10 +928,10 @@ def collect_nodes_by_color_class(partition):
 
         nodes_by_color[color].append(i)
     out = Dict()
-    out[0] = np.array([0], dtype=np.uint32)
+    out[0] = np.array([0], dtype=np.int32)
     del out[0]
     for key, value in nodes_by_color.items():
-        arr = np.zeros(len(value), dtype=np.uint32)
+        arr = np.zeros(len(value), dtype=np.int32)
         for i in range(len(value)):  # pylint: disable=consider-using-enumerate
             arr[i] = value[i]
         out[key] = arr
@@ -1019,7 +1019,7 @@ def to_chunks(arr, n_chunks):
     """Chunks a given workload into approximately equally large chunks"""
     total = arr.sum()
     per_chunk = max(total//n_chunks, 1)
-    chunks = np.zeros(n_chunks+2, dtype=np.uint32)
+    chunks = np.zeros(n_chunks+2, dtype=np.int32)
     s=0
     i=0
     u=0

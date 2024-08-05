@@ -49,7 +49,7 @@ def normalize(v):
 class TestCentralities(unittest.TestCase):
 
     def test_pagerank_simple(self, ):
-        G = FastGraph(np.array([[0,1], [2,1]], dtype=np.uint32), True)
+        G = FastGraph(np.array([[0,1], [2,1]], dtype=np.int32), True)
         v_base = nx.pagerank(G.to_nx(), tol=1e-15, max_iter=300)
         v_base = normalize(v_base)
         verify_all(G, v_base, calc_pagerank)
@@ -63,14 +63,14 @@ class TestCentralities(unittest.TestCase):
 
 
     def test_eigenvector_simple(self, ):
-        G = FastGraph(np.array([[0,1], [1,2], [2,0]], dtype=np.uint32), True)
+        G = FastGraph(np.array([[0,1], [1,2], [2,0]], dtype=np.int32), True)
         v_base = nx.eigenvector_centrality(G.to_nx(), tol=1e-15, max_iter=300)
         v_base = normalize(v_base)
         verify_all(G, v_base, calc_eigenvector)
 
 
     def test_eigenvector_simple2(self, ):
-        G = FastGraph(np.array([[0,1], [0,2], [1,3], [2,3], [3,0]], dtype=np.uint32), True)
+        G = FastGraph(np.array([[0,1], [0,2], [1,3], [2,3], [3,0]], dtype=np.int32), True)
         v_base = nx.eigenvector_centrality(G.to_nx(), tol=1e-15, max_iter=300)
         v_base = normalize(v_base)
         verify_all(G, v_base, calc_eigenvector)
@@ -94,7 +94,7 @@ class TestCentralities(unittest.TestCase):
 
 
     def test_hits_simple(self, ):
-        G = FastGraph(np.array([[0,1], [2,1]], dtype=np.uint32), True)
+        G = FastGraph(np.array([[0,1], [2,1]], dtype=np.int32), True)
         h, a = nx.hits(G.to_nx(), tol=1e-15, max_iter=600)
         h = normalize(h)
         a = normalize(a)
@@ -104,7 +104,7 @@ class TestCentralities(unittest.TestCase):
 
 
     def test_katz_simple(self, ):
-        G = FastGraph(np.array([[0,1], [2,1]], dtype=np.uint32), True)
+        G = FastGraph(np.array([[0,1], [2,1]], dtype=np.int32), True)
         v_base = nx.katz_centrality(G.to_nx(), tol=1e-15, max_iter=300, normalized=False)
         v_base = to_vec(v_base)
         verify_all(G, v_base, calc_katz)
@@ -118,7 +118,7 @@ class TestCentralities(unittest.TestCase):
 
 
     def test_katz2_simple(self, ):
-        G = FastGraph(np.array([[0,1], [2,1]], dtype=np.uint32), True)
+        G = FastGraph(np.array([[0,1], [2,1]], dtype=np.int32), True)
         v_base = nx.katz_centrality(G.to_nx(), tol=1e-15, max_iter=300, normalized=False)
         v_base = to_vec(v_base)
         verify_all(G, v_base, calc_katz_iter)

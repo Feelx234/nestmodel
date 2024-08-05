@@ -10,8 +10,8 @@ from numba.types import float32
 def edges_to_dict(edges):
     """Converts edge list into edge dict"""
     d = Dict()
-    d[np.uint32(0), np.uint32(0)] = True
-    del d[np.uint32(0), np.uint32(0)]
+    d[np.int32(0), np.int32(0)] = True
+    del d[np.int32(0), np.int32(0)]
     for i,j in edges:
         d[(i,j)]=True
 
@@ -20,7 +20,7 @@ def edges_to_dict(edges):
 @njit
 def edge_dict_to_edge_list(edge_dict):
     """Converts edge dict into edge list"""
-    edge_list = np.empty((len(edge_dict),2), dtype=np.uint32)
+    edge_list = np.empty((len(edge_dict),2), dtype=np.int32)
     for n, (i,j) in enumerate(edge_dict.keys()):
         edge_list[n, 0]=i
         edge_list[n, 1]=j

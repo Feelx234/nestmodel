@@ -17,29 +17,29 @@ def safe_diff(arr1, arr2):
 
 class TestColorings(unittest.TestCase):
     def test_make_labeling_compact_1(self):
-        arr = np.zeros(10, dtype=np.uint32)
+        arr = np.zeros(10, dtype=np.int32)
         make_labeling_compact(arr)
-        np.testing.assert_array_equal(arr, np.zeros(10, dtype=np.uint32))
+        np.testing.assert_array_equal(arr, np.zeros(10, dtype=np.int32))
 
 
     def test_make_labeling_compact_2(self):
-        arr = np.arange(11, dtype=np.uint32)
+        arr = np.arange(11, dtype=np.int32)
         make_labeling_compact(arr)
-        np.testing.assert_array_equal(arr, np.arange(11, dtype=np.uint32))
+        np.testing.assert_array_equal(arr, np.arange(11, dtype=np.int32))
 
 
     def test_make_labeling_compact_3(self):
-        arr = np.arange(11, dtype=np.uint32)
+        arr = np.arange(11, dtype=np.int32)
         arr[1] = 1000
         make_labeling_compact(arr)
-        np.testing.assert_array_equal(arr, np.arange(11, dtype=np.uint32))
+        np.testing.assert_array_equal(arr, np.arange(11, dtype=np.int32))
 
 
 
     def test_get_colors_internal(self):
         # the triples are (start, stop, depth)
         # triples need to be sorted first increasing by start and then increasing by depth
-        color_ranges = np.array([(0,5,0), (0,1,2), (1,3,1), (2,3,3), (3,4,4), (5,7,0), (5,6,2)], dtype=np.uint32)
+        color_ranges = np.array([(0,5,0), (0,1,2), (1,3,1), (2,3,3), (3,4,4), (5,7,0), (5,6,2)], dtype=np.int32)
         solutions = [
             [0,0,0,0,0,5,5],
             [0,2,2,0,0,5,5],
@@ -80,7 +80,7 @@ class TestRefinementColors(unittest.TestCase):
         """Test on a line of length three"""
         order = np.array([0, 2, 1])
         ranges = np.array([[0, 3, 0],
-                        [2, 3, 1]], dtype=np.uint32)
+                        [2, 3, 1]], dtype=np.int32)
         solutions = [
             np.zeros(len(order)),
             [0,1,0],
@@ -93,7 +93,7 @@ class TestRefinementColors(unittest.TestCase):
         order = np.array([0, 4, 1, 3, 2], dtype=np.int64)
         ranges = np.array([[0, 5, 0],
                             [2, 5, 1],
-                            [4, 5, 2]], dtype=np.uint32)
+                            [4, 5, 2]], dtype=np.int32)
         solutions = [
             np.zeros(len(order)),
             [0,1,1,1,0],
@@ -108,7 +108,7 @@ class TestRefinementColors(unittest.TestCase):
         ranges = np.array([[0, 8, 0],
                             [2, 8, 1],
                             [4, 8, 2],
-                            [6, 8, 3]], dtype=np.uint32)
+                            [6, 8, 3]], dtype=np.int32)
         solutions = [
             np.zeros(8),
             [0, 1, 1, 1, 1, 1, 1, 0],

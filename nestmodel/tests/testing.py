@@ -102,7 +102,7 @@ def check_blocks_are_unique_class(all_blocks, edges_classes):
 
 def check_blocks_dont_overlap(blocks, n_edges):
     """Asserts that there is no overlap in the blocks"""
-    number_of_block_edge_is_part_of = np.zeros(n_edges, dtype=np.uint32)
+    number_of_block_edge_is_part_of = np.zeros(n_edges, dtype=np.int32)
 
     for start, end in blocks:
         number_of_block_edge_is_part_of[start:end]+=1
@@ -115,7 +115,7 @@ def check_outside_of_blocks(all_blocks, G):
 
     for blocks, labels in zip(all_blocks, G.base_partitions):
         n_edges = len(G.edges_ordered)
-        number_of_block_edge_is_part_of = np.zeros(n_edges, dtype=np.uint32)
+        number_of_block_edge_is_part_of = np.zeros(n_edges, dtype=np.int32)
 
         for start, end in blocks:
             number_of_block_edge_is_part_of[start:end]+=1

@@ -209,12 +209,12 @@ def normalise_undirected_edges(edges, labels=None):
 
 def get_unique_edges_from_edge_list(edges, is_directed):
     """Returns unique code per edge for edgelist edges"""
-    edges = np.array(edges, dtype=np.uint64).copy()
+    edges = np.array(edges, dtype=np.int64).copy()
     if not is_directed:
         # need to "sort edges"
 
         edges=normalise_undirected_edges(edges)
-    return edges[:,0]*np.iinfo(np.uint32).max + edges[:,1]
+    return edges[:,0]*np.iinfo(np.int32).max + edges[:,1]
 
 
 

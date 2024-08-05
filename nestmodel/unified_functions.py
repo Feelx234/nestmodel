@@ -83,7 +83,7 @@ def get_out_degree_array(G):
 
 def _nx_dict_to_array(d):
     """Helper function converting dict to array"""
-    return np.array(d, dtype=np.uint32)[:,1]
+    return np.array(d, dtype=np.int32)[:,1]
 
 
 def to_fast_graph(G):

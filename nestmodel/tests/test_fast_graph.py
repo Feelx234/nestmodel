@@ -13,12 +13,12 @@ import os
 
 class TestFastGraph(unittest.TestCase):
     def test_edges(self):
-        edges = np.array([[0,1]], dtype=np.uint32)
+        edges = np.array([[0,1]], dtype=np.int32)
         G = FastGraph(edges.copy(), is_directed=True)
         assert_array_equal(edges, G.edges)
 
     def test_save_npz(self):
-        edges = np.array([[0,1]], dtype=np.uint32)
+        edges = np.array([[0,1]], dtype=np.int32)
         G = FastGraph(edges.copy(), is_directed=True)
         G.save_npz("./out.npz")
 
@@ -29,7 +29,7 @@ class TestFastGraph(unittest.TestCase):
 
 
     def test_save_npz_wl(self):
-        edges = np.array([[0,1], [1,2]], dtype=np.uint32)
+        edges = np.array([[0,1], [1,2]], dtype=np.int32)
         G = FastGraph(edges.copy(), is_directed=False)
         G.ensure_edges_prepared()
         G.save_npz("./out.npz", include_wl=True)
@@ -47,7 +47,7 @@ class TestFastGraph(unittest.TestCase):
 
 
     def test_copy(self):
-        edges = np.array([[0,1]], dtype=np.uint32)
+        edges = np.array([[0,1]], dtype=np.int32)
         G = FastGraph(edges.copy(), is_directed=True)
         G2 = G.copy()
 
@@ -57,14 +57,14 @@ class TestFastGraph(unittest.TestCase):
 
 
     def test_rewire1_double_edge_1(self):
-        edges = np.array([[0,1],[2,3]], dtype=np.uint32)
+        edges = np.array([[0,1],[2,3]], dtype=np.int32)
 
         G = FastGraph(edges.copy(), is_directed=True)
         G.ensure_edges_prepared()
         G.rewire(0, 1, seed=1, r=1)
         assert_array_equal(G.edges, edges)
 
-        edges2 = np.array([[0,3],[2,1]], dtype=np.uint32)
+        edges2 = np.array([[0,3],[2,1]], dtype=np.int32)
         G = FastGraph(edges.copy(), is_directed=True)
         G.ensure_edges_prepared()
         G.rewire(0, method=1, seed=0, r=1)
@@ -73,32 +73,32 @@ class TestFastGraph(unittest.TestCase):
 
 
     def test_rewire1_double_edge_2(self):
-        edges = np.array([[0,1],[2,3]], dtype=np.uint32)
+        edges = np.array([[0,1],[2,3]], dtype=np.int32)
 
         G = FastGraph(edges.copy(), is_directed=True)
         G.ensure_edges_prepared()
         G.rewire(0, method=2, seed=1, n_rewire=1)
         assert_array_equal(G.edges, edges)
 
-        edges2 = np.array([[0,3],[2,1]], dtype=np.uint32)
+        edges2 = np.array([[0,3],[2,1]], dtype=np.int32)
         G.rewire(0, 1, seed=0, n_rewire=1)
         assert_array_equal(G.edges, edges2)
 
 
     def test_rewire1_double_edge(self):
-        edges_in = np.array([[0,1],[2,3]], dtype=np.uint32)
+        edges_in = np.array([[0,1],[2,3]], dtype=np.int32)
 
         result_edges = [
-            np.array([[0, 3], [1, 2]], dtype=np.uint32),
-            np.array([[0, 1], [2, 3]], dtype=np.uint32),
-            np.array([[0, 2], [3, 1]], dtype=np.uint32),
-            np.array([[0, 1], [2, 3]], dtype=np.uint32),
-            np.array([[0, 1], [2, 3]], dtype=np.uint32),
-            np.array([[1, 0], [2, 3]], dtype=np.uint32),
-            np.array([[0, 2], [3, 1]], dtype=np.uint32),
-            np.array([[1, 2], [0, 3]], dtype=np.uint32),
-            np.array([[1, 3], [2, 0]], dtype=np.uint32),
-            np.array([[0, 3], [2, 1]], dtype=np.uint32)
+            np.array([[0, 3], [1, 2]], dtype=np.int32),
+            np.array([[0, 1], [2, 3]], dtype=np.int32),
+            np.array([[0, 2], [3, 1]], dtype=np.int32),
+            np.array([[0, 1], [2, 3]], dtype=np.int32),
+            np.array([[0, 1], [2, 3]], dtype=np.int32),
+            np.array([[1, 0], [2, 3]], dtype=np.int32),
+            np.array([[0, 2], [3, 1]], dtype=np.int32),
+            np.array([[1, 2], [0, 3]], dtype=np.int32),
+            np.array([[1, 3], [2, 0]], dtype=np.int32),
+            np.array([[0, 3], [2, 1]], dtype=np.int32)
         ]
 
         for i, res_edges in enumerate(result_edges):
@@ -109,7 +109,7 @@ class TestFastGraph(unittest.TestCase):
             assert_array_equal(G.edges, res_edges, f"{i}")
 
     def calc_base_wl_after_rewire_raises(self):
-        G = FastGraph(np.array([[0,1],[2,3]], dtype=np.uint32), is_directed=False)
+        G = FastGraph(np.array([[0,1],[2,3]], dtype=np.int32), is_directed=False)
         G.ensure_edges_prepared()
         G.rewire(0, 1, seed=0, r=1)
         with self.assertRaises(ValueError):
@@ -118,13 +118,13 @@ class TestFastGraph(unittest.TestCase):
 
 
     def test_fast_graph_directed_triangle(self):
-        G = FastGraph(np.array([[0,1], [1,2], [2,0]], dtype=np.uint32), is_directed=True)
+        G = FastGraph(np.array([[0,1], [1,2], [2,0]], dtype=np.int32), is_directed=True)
         G.ensure_edges_prepared()
         G.rewire(0, 1, seed=3, r=1)
         assert_array_equal(G.edges, np.array([[1,0],[2,1], [0,2]]))
 
     def test_calc_wl(self):
-        edges = np.array([[0,1],[2,3], [2,4]], dtype=np.uint32)
+        edges = np.array([[0,1],[2,3], [2,4]], dtype=np.int32)
         G = FastGraph(edges, is_directed=True)
         res1, res2 = [[0, 0, 0, 0, 0], [0, 1, 0, 1, 1]]
         out1, out2 = G.calc_wl()
@@ -132,7 +132,7 @@ class TestFastGraph(unittest.TestCase):
         assert_array_equal(res2, out2)
 
     def test_calc_wl_out_degree(self):
-        edges = np.array([[0,1],[2,3], [2,4]], dtype=np.uint32)
+        edges = np.array([[0,1],[2,3], [2,4]], dtype=np.int32)
         G = FastGraph(edges, is_directed=True)
         res1, res2 = [[0, 1, 2, 1, 1], [0, 1, 2, 3, 3]]
         out1, out2 = G.calc_wl("out_degree")
@@ -140,17 +140,17 @@ class TestFastGraph(unittest.TestCase):
         assert_array_equal(res2, out2)
 
     def test_calc_wl_init_colors(self):
-        edges = np.array([[0,1],[2,3], [2,4]], dtype=np.uint32)
+        edges = np.array([[0,1],[2,3], [2,4]], dtype=np.int32)
         G = FastGraph(edges, is_directed=True)
         res1, res2 = [[0, 1, 2, 1, 1], [0, 1, 2, 3, 3]]
-        out1, out2 = G.calc_wl(np.array([0, 1, 2, 1, 1], dtype=np.uint32))
+        out1, out2 = G.calc_wl(np.array([0, 1, 2, 1, 1], dtype=np.int32))
         assert_array_equal(res1, out1)
         assert_array_equal(res2, out2)
 
     def test_calc_wl_both(self):
-        edges = np.array([[0,1],[1,2], [3,4], [4,5], [4,6]], dtype=np.uint32)
+        edges = np.array([[0,1],[1,2], [3,4], [4,5], [4,6]], dtype=np.int32)
         G = FastGraph(edges.copy(), is_directed=True)
-        results = [np.zeros(7, dtype=np.uint32),[0, 1, 2, 0, 3, 2, 2], [0, 1, 2, 3, 4, 5, 5]]
+        results = [np.zeros(7, dtype=np.int32),[0, 1, 2, 0, 3, 2, 2], [0, 1, 2, 3, 4, 5, 5]]
         res0, res1, res2 = results
         start, out1, out2 = G.calc_wl_both()
         assert_array_equal(res0, start)
@@ -162,7 +162,7 @@ class TestFastGraph(unittest.TestCase):
         assert_array_equal(G.base_partitions, np.array(results))
 
         G = FastGraph(edges.copy(), is_directed=True)
-        out1, out2 = G.calc_wl_both(initial_colors=np.array([0, 1, 2, 0, 3, 2, 2], dtype=np.uint32))
+        out1, out2 = G.calc_wl_both(initial_colors=np.array([0, 1, 2, 0, 3, 2, 2], dtype=np.int32))
         assert_array_equal(res1, out1)
         assert_array_equal(res2, out2)
 
@@ -173,19 +173,19 @@ class TestFastGraph(unittest.TestCase):
            [52, 53], [54, 72], [56, 69], [99, 39], [60, 0], [25, 55], [64, 63], [66, 67], [68, 24],
             [70, 83], [47, 23], [74, 75], [33, 1], [82, 59], [80, 6], [73, 77], [41, 57], [86, 81],
              [88, 94], [90, 91], [92, 100], [95, 78], [97, 79], [98, 58], [101, 87]]
-        edges = np.array([[i,i+1] for i in range(0,102,2)], dtype=np.uint32)
+        edges = np.array([[i,i+1] for i in range(0,102,2)], dtype=np.int32)
         G = FastGraph(edges, is_directed=False)
         G.ensure_edges_prepared()
         G.rewire(0, method=1, seed=0, r=1)
         assert_array_equal(G.edges, result)
 
     def test_rewire_limited_depth(self):
-        G = FastGraph(np.array([(0,2), (1,2)], dtype=np.uint32), is_directed=False)
+        G = FastGraph(np.array([(0,2), (1,2)], dtype=np.int32), is_directed=False)
         G.ensure_edges_prepared(max_depth=1)
         self.assertEqual(G.wl_iterations, 1)
 
     def test_wl_limited_depth(self):
-        edges = np.array([(0,2), (1,2), (2,3)], dtype=np.uint32)
+        edges = np.array([(0,2), (1,2), (2,3)], dtype=np.int32)
         G = FastGraph(edges, is_directed=False)
         with self.assertRaises(ValueError):
             G.ensure_edges_prepared(max_depth=0)
@@ -199,7 +199,7 @@ class TestFastGraph(unittest.TestCase):
         self.assertEqual(G.wl_iterations, 2)
 
     def test_wl_limited_depth_both(self):
-        edges = np.array([(0,2), (1,2), (2,3)], dtype=np.uint32)
+        edges = np.array([(0,2), (1,2), (2,3)], dtype=np.int32)
         G = FastGraph(edges, is_directed=False)
         with self.assertRaises(ValueError):
             G.ensure_edges_prepared(max_depth=0, both=True)
@@ -213,20 +213,20 @@ class TestFastGraph(unittest.TestCase):
         self.assertEqual(G.wl_iterations, 2)
 
     def test_source_only_rewiring(self):
-        G = FastGraph(np.array([(0,1)], dtype=np.uint32), is_directed=True, num_nodes=3)
+        G = FastGraph(np.array([(0,1)], dtype=np.int32), is_directed=True, num_nodes=3)
         G.ensure_edges_prepared(sorting_strategy="source")
         G.rewire(0, method=1, seed=3, r=1, source_only=True)
         np.testing.assert_array_equal(G.edges, [[2, 1]])
 
     def test_source_only_rewiring_parallel(self):
-        G = FastGraph(np.array([(0,1)], dtype=np.uint32), is_directed=True, num_nodes=3)
+        G = FastGraph(np.array([(0,1)], dtype=np.int32), is_directed=True, num_nodes=3)
         G.ensure_edges_prepared(sorting_strategy="source")
         G.rewire(0, method=1, seed=3, r=1, source_only=True, parallel=True)
         np.testing.assert_array_equal(G.edges, [[2, 1]])
 
 
     def test_prrewiring_only_rewiring(self):
-        G = FastGraph(np.array([(0,2), (0,3), (2,3), (1,4), (6,7), (1,5), (0,6), (0,7), (1,8), (1,9)], dtype=np.uint32), is_directed=False, num_nodes=10)
+        G = FastGraph(np.array([(0,2), (0,3), (2,3), (1,4), (6,7), (1,5), (0,6), (0,7), (1,8), (1,9)], dtype=np.int32), is_directed=False, num_nodes=10)
         G.ensure_edges_prepared(sorting_strategy="source")
         G.rewire(0, method=1, seed=3, r=1)
         np.testing.assert_array_equal(G.block_indices[0], [[0, 10]])
@@ -245,16 +245,16 @@ class TestFastGraph(unittest.TestCase):
         using initial colors to make node 2 and 3 different
         which is only valid with the source only strategy
         """
-        G = FastGraph(np.array([(0,2), (1,3), ], dtype=np.uint32), is_directed=True, num_nodes=4)
+        G = FastGraph(np.array([(0,2), (1,3), ], dtype=np.int32), is_directed=True, num_nodes=4)
 
-        G.ensure_edges_prepared(initial_colors=np.array([0,0,1,2], np.uint32), sorting_strategy="source")
+        G.ensure_edges_prepared(initial_colors=np.array([0,0,1,2], np.int32), sorting_strategy="source")
         G.rewire(0, method=1, seed=5, r=1)
         np.testing.assert_array_equal(G.edges, [[0, 3], [1, 2]])
 
     def test_prrewiring_only_rewiring2_parallel(self):
-        G = FastGraph(np.array([(0,2), (1,3), ], dtype=np.uint32), is_directed=True, num_nodes=4)
+        G = FastGraph(np.array([(0,2), (1,3), ], dtype=np.int32), is_directed=True, num_nodes=4)
 
-        G.ensure_edges_prepared(initial_colors=np.array([0,0,1,2], np.uint32), sorting_strategy="source")
+        G.ensure_edges_prepared(initial_colors=np.array([0,0,1,2], np.int32), sorting_strategy="source")
         G.rewire(0, method=1, seed=5, r=1, parallel=True)
         np.testing.assert_array_equal(G.edges, [[0, 3], [1, 2]])
 

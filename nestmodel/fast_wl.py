@@ -1,6 +1,6 @@
 # pylint: disable=consider-using-enumerate
 from numba import njit
-from numba.types import uint32, uint64
+from numba.types import int32, int64
 import numpy as np
 from nestmodel.colorings import make_labeling_compact, RefinementColors
 from nestmodel.wl_nlogn import color_refinement_nlogn
@@ -29,7 +29,7 @@ def primesfrom2to(n):
 
 
 
-@njit([(uint32[:], uint32), (uint64[:], uint64)],cache=True)
+@njit([(int32[:], int32), (int64[:], int64)],cache=True)
 def my_bincount(arr, min_lenght):
     """The same as numpy bincount, but works on unsigned integers as well"""
     if min_lenght <= 0:
@@ -38,12 +38,12 @@ def my_bincount(arr, min_lenght):
         m = min_lenght
     out = np.zeros(m+1, dtype=arr.dtype)
     for i in range(len(arr)):
-        out[arr[i]]+=np.uint32(1)
+        out[arr[i]]+=np.int32(1)
     return out
 
 
 
-@njit([(uint32[:,:], uint32), (uint64[:,:], uint64)], cache=True)
+@njit([(int32[:,:], int32), (int64[:,:], int64)], cache=True)
 def to_in_neighbors(edges, num_nodes):
     """ transforms the edges into two arrays the first arrays indicates ranges into the second array
         the second array contains the in neighbors of those nodes indicated in array 1
@@ -61,15 +61,15 @@ def to_in_neighbors(edges, num_nodes):
     else:
         assert num_nodes > 0
         num_nodes -= 1
-    in_degrees = my_bincount(edges[:,1].ravel(), min_lenght=np.uint32(num_nodes))
+    in_degrees = my_bincount(edges[:,1].ravel(), min_lenght=np.int32(num_nodes))
 
     # starting_positions[i] ..starting_positions[i+1] contains all in neighbors of node i
-    starting_positions = np.empty(in_degrees.shape[0]+1, dtype=np.uint32)
+    starting_positions = np.empty(in_degrees.shape[0]+1, dtype=np.int32)
     starting_positions[0]=0
     starting_positions[1:] = in_degrees.cumsum()
     current_index = starting_positions.copy()
 
-    in_neighbors = np.zeros(edges.shape[0], dtype=np.uint32)
+    in_neighbors = np.zeros(edges.shape[0], dtype=np.int32)
 
     for i in range(edges.shape[0]):
         l = edges[i,0]
@@ -95,9 +95,9 @@ def WL_fast(edges, num_nodes : int = None, labels = None, max_iter : int = None,
     runtime is O(max_depth * (E + log(N)N) )
     memory requirement is O(E + max_depth * N)
     """
-    assert edges.dtype==np.uint32 or edges.dtype==np.uint64
+    assert edges.dtype==np.int32 or edges.dtype==np.int64
     if not labels is None:
-        assert labels.dtype==np.uint32 or labels.dtype==np.uint64
+        assert labels.dtype==np.int32 or labels.dtype==np.int64
     assert method in ("normal", "nlogn")
     if num_nodes is None:
         num_nodes = int(edges.max()+1)
@@ -106,7 +106,7 @@ def WL_fast(edges, num_nodes : int = None, labels = None, max_iter : int = None,
     if max_iter <=0:
         raise ValueError("Need at least max_iter/max_depth of 1")
     if labels is None:
-        labels = np.zeros(num_nodes, dtype=np.uint32)
+        labels = np.zeros(num_nodes, dtype=np.int32)
     else:
         labels = np.array(labels.copy(), dtype=labels.dtype)
         make_labeling_compact(labels)
@@ -139,11 +139,11 @@ def WL_fast(edges, num_nodes : int = None, labels = None, max_iter : int = None,
 
 
 
-@njit([(uint32[:],uint32[:]), (uint64[:], uint64[:])], locals={'num_entries': uint32}, cache=True)
+@njit([(int32[:],int32[:]), (int64[:], int64[:])], locals={'num_entries': int32}, cache=True)
 def injective_combine(labels1, labels2):
     """Combine two labelings to create a new labeling that respects both labelings"""
-#    assert labels1.dtype==np.uint32
-#    assert labels2.dtype==np.uint32
+#    assert labels1.dtype==np.int32
+#    assert labels2.dtype==np.int32
     assert len(labels1)==len(labels2)
 
     out_labels= np.empty_like(labels1)
@@ -167,9 +167,9 @@ def injective_combine(labels1, labels2):
 def WL_both(edges, num_nodes=None, labels = None, max_iter = None): # pylint:disable=invalid-name
     """A very simple implementation of WL both
     """
-    assert edges.dtype==np.uint32 or edges.dtype==np.uint64
+    assert edges.dtype==np.int32 or edges.dtype==np.int64
     if not labels is None:
-        assert labels.dtype==np.uint32
+        assert labels.dtype==np.int32
     if max_iter is None:
         max_iter=201 #
     if num_nodes is None:
@@ -179,7 +179,7 @@ def WL_both(edges, num_nodes=None, labels = None, max_iter = None): # pylint:dis
 
     out = []
     if labels is None:
-        labels = np.zeros(num_nodes, dtype=np.uint32)
+        labels = np.zeros(num_nodes, dtype=np.int32)
     else:
         labels = np.array(labels.copy(), dtype=labels.dtype)
         make_labeling_compact(labels)
@@ -228,7 +228,7 @@ def is_sorted_fast(vals, order):
 
 
 
-@njit([(uint32[:], uint32[:], uint32[:], uint32), (uint32[:], uint32[:], uint64[:], uint32)], cache=True)
+@njit([(int32[:], int32[:], int32[:], int32), (int32[:], int32[:], int64[:], int32)], cache=True)
 def _wl_fast2(startings, neighbors, labels, max_iter=201):
     """WL using floating point operations with primes similar to
     https://github.com/rmgarnett/fast_wl/blob/master/wl_transformation.m

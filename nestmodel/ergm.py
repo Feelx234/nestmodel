@@ -115,8 +115,8 @@ def edge_flip_ergm_pagerank_dict(edge_dict, n, target_p, n_steps, phi, seed):
 
     for _ in range(n_steps):
         k = np.random.randint(0,n*n)
-        j = np.uint32(k % n)
-        i = np.uint32((k - j) //n)
+        j = np.int32(k % n)
+        i = np.int32((k - j) //n)
 
         if i==j:
             continue

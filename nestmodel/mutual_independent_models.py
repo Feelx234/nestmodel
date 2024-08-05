@@ -10,7 +10,7 @@ def Gnp_row_first(n, p, seed=0):
 def _Gnp_row_first(n, p):
     """Generates a random graph drawn from the Gnp ensemble"""
     approx = int(n*(n-1)*p)
-    E=np.empty((approx, 2), dtype=np.uint32)
+    E=np.empty((approx, 2), dtype=np.int32)
 
     x = 0
     y = 0
@@ -20,19 +20,19 @@ def _Gnp_row_first(n, p):
     i = 0
     while True:
         k = np.random.geometric(p)
-        x += k
         agg += k
         if agg > upper_bound:
             break
+        x += k
         while x >= n:
-            x+=y+2-n
+            x+=y+2-n # = n-1 -(r+1)
             y+=1
         E[i,0]=y
         E[i,1]=x
 
         i+=1
         if i >= len(E):
-            E2 = np.empty((len(E)+approx,2), dtype=np.uint32)
+            E2 = np.empty((len(E)+approx,2), dtype=np.int32)
             E2[:len(E)] = E[:]
             E = E2
     return E[:i,:]
@@ -51,7 +51,7 @@ def random_matrix(n_rows, n_columns, p, seed):
     """
     np.random.seed(seed)
     approx = int(n_rows*n_columns*p)
-    E=np.empty((approx, 2), dtype=np.uint32)
+    E=np.empty((approx, 2), dtype=np.int32)
     i=0
 
     x = -1
@@ -74,7 +74,7 @@ def random_matrix(n_rows, n_columns, p, seed):
 
         i+=1
         if i >= len(E):
-            E2 = np.empty((len(E)+approx,2), dtype=np.uint32)
+            E2 = np.empty((len(E)+approx,2), dtype=np.int32)
             E2[:len(E)] = E[:]
             E = E2
 

@@ -4,10 +4,10 @@ from pathlib import Path
 import os
 
 
-hep_link = r"http://snap.stanford.edu/data/cit-HepPh.txt.gz"
-astro_link = r"http://snap.stanford.edu/data/ca-AstroPh.txt.gz"
+hep_link = r"https://snap.stanford.edu/data/cit-HepPh.txt.gz"
+astro_link = r"https://snap.stanford.edu/data/ca-AstroPh.txt.gz"
 # http://networksciencebook.com/translations/en/resources/data.html
-networksciencebook_link = r"http://networksciencebook.com/translations/en/resources/networks.zip"
+networksciencebook_link = r"https://networksciencebook.com/translations/en/resources/networks.zip"
 google_link = r"https://snap.stanford.edu/data/web-Google.txt.gz"
 pokec_link = r"https://snap.stanford.edu/data/soc-pokec-relationships.txt.gz"
 
@@ -40,7 +40,7 @@ links = [hep_link, astro_link, networksciencebook_link, google_link, pokec_link]
 download_names = ["cit-HepPh.txt.gz", "ca-AstroPh.txt.gz", "networks.zip", "web-Google.txt.gz", "soc-pokec-relationships.txt.gz"]
 final_files = [("cit-HepPh.txt",), ("ca-AstroPh.txt",), networkscience_files, ("web-Google.txt",), ("soc-pokec-relationships.txt",)]
 
-combinatorical_prefix = "http://users.cecs.anu.edu.au/~bdm/data/"
+combinatorical_prefix = "https://users.cecs.anu.edu.au/~bdm/data/"
 combinatorial_names = [f"ge{i}d1.g6" for i in range(2,16)]
 combinatorial_links = [combinatorical_prefix+name for name in combinatorial_names]
 combinatorial_final = [(name, name[:-3]+".npy") for name in combinatorial_names]
@@ -91,6 +91,7 @@ if True:
             command = dowload_command(link, parent, download_name)
             print()
             print("<<< downloading " + download_name)
+            print(command)
             subprocess.call(command, shell=True, cwd=str(parent))
 
         if download_name.endswith(".gz"):

@@ -21,7 +21,7 @@ def ensure_is_numpy_or_none(arr, dtype=np.int64):
 class FastGraph:
     """A custom class representing Graphs through edge lists that can be used to efficiently be rewired"""
     def __init__(self, edges, is_directed, check_results=False, num_nodes=None):
-        assert edges.dtype==np.uint32 or edges.dtype==np.uint64
+        assert edges.dtype==np.int32 or edges.dtype==np.int64
         assert isinstance(is_directed, bool), f"wrong type of is_directed: {type(is_directed)}"
         self._edges = edges.copy()
         self.edges_ordered = None
@@ -42,8 +42,8 @@ class FastGraph:
         self.block_indices = None
         self.block_dead = None
 
-        self.out_degree = np.array(np.bincount(edges[:,0].ravel(), minlength=self.num_nodes), dtype=np.uint32)
-        self.in_degree =  np.array(np.bincount(edges[:,1].ravel(), minlength=self.num_nodes), dtype=np.uint32)
+        self.out_degree = np.array(np.bincount(edges[:,0].ravel().astype(np.int64), minlength=np.int64(self.num_nodes)), dtype=np.int32)
+        self.in_degree =  np.array(np.bincount(edges[:,1].ravel().astype(np.int64), minlength=np.int64(self.num_nodes)), dtype=np.int32)
 
         if self.is_directed:
             self.out_dead_ends = np.nonzero(self.out_degree==0)[0]
@@ -77,7 +77,7 @@ class FastGraph:
     @staticmethod
     def from_gt(G): # pragma: gt no cover
         """Creates a FastGraph object from a graphtool graph"""
-        edges = np.array(G.get_edges(), dtype=np.uint32)
+        edges = np.array(G.get_edges(), dtype=np.int32)
         is_directed = G.is_directed()
         return FastGraph(edges, is_directed)
 
@@ -97,7 +97,7 @@ class FastGraph:
             edges_nx = [(mapping[u], mapping[v]) for u, v in G.edges]
         else:
             edges_nx = G.edges
-        edges = np.array(edges_nx, dtype=np.uint32)
+        edges = np.array(edges_nx, dtype=np.int32)
         is_directed = G.is_directed()
 
         if unmapping is None:
@@ -225,13 +225,13 @@ class FastGraph:
         else:
             partitions = self.calc_wl_both(initial_colors=initial_colors, max_depth=max_depth)
 
-        self.base_partitions = np.array(partitions, dtype=np.uint32)
+        self.base_partitions = np.array(partitions, dtype=np.int32)
         self.wl_iterations = len(self.base_partitions)
 
 
     def ensure_edges_prepared(self, initial_colors=None, both=False, max_depth=None, sorting_strategy=None):
         """Prepare the edges by first ensuring the base WL and then sorting edges by base WL"""
-        initial_colors = ensure_is_numpy_or_none(initial_colors, dtype=np.uint32)
+        initial_colors = ensure_is_numpy_or_none(initial_colors, dtype=np.int32)
         if self.base_partitions is None:
             self.ensure_base_wl(initial_colors=initial_colors, both=both, max_depth=max_depth)
         if self.edges_ordered is None:

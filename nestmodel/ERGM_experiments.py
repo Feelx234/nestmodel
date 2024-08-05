@@ -167,7 +167,7 @@ class Erdos_RewireWrapper():  # pylint: disable = invalid-name
         rew_t0 = time.process_time()
         _set_seed(seed)
         edges = Gnp_row_first(self.n, self.density)
-        edges = np.array(edges, dtype=np.uint32)
+        edges = np.array(edges, dtype=np.int32)
         G = FastGraph(edges, self.is_directed, num_nodes=self.n)
         result_p = calc_pagerank(G)
         rew_total = time.process_time() - rew_t0

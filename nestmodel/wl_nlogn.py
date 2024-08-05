@@ -1,16 +1,16 @@
 # pylint: disable=invalid-name, consider-using-enumerate, missing-function-docstring
 
 from numba import njit
-from numba.types import uint32
+from numba.types import int32
 import numpy as np
 
 # from numba import objmode
 # import time
-@njit([(uint32[:], uint32[:])], cache=True)
+@njit([(int32[:], int32[:])], cache=True)
 def get_in_degree(end_neighbors, neighbors):
     """Compute the in degree"""
     #n_nodes = len(end_neighbors)-1
-    in_degree = np.zeros(len(end_neighbors)-1, dtype=np.uint32)
+    in_degree = np.zeros(len(end_neighbors)-1, dtype=np.int32)
 
     for i in range(len(neighbors)):
         in_degree[neighbors[i]]+=1
@@ -21,7 +21,7 @@ def get_in_degree(end_neighbors, neighbors):
 @njit(cache=True)
 def get_degree_partition(in_degree, max_degree):
     n_nodes = len(in_degree)
-    num_per_degree = np.zeros(max_degree+2, dtype=np.uint32)
+    num_per_degree = np.zeros(max_degree+2, dtype=np.int32)
     for i in range(len(in_degree)):
         num_per_degree[in_degree[i]]+=1
 
@@ -42,21 +42,21 @@ def get_degree_partition(in_degree, max_degree):
         prev_end += num_nodes_this_class
         num_classes+=1
 
-    position_of_node = np.empty(n_nodes, dtype=np.uint32)
-    nodes_by_class = np.empty(n_nodes, dtype=np.uint32)
+    position_of_node = np.empty(n_nodes, dtype=np.int32)
+    nodes_by_class = np.empty(n_nodes, dtype=np.int32)
     for i in range(n_nodes):
         nodes_by_class[num_per_degree[in_degree[i]]]=i
         position_of_node[i] = num_per_degree[in_degree[i]]
         num_per_degree[in_degree[i]]+=1
 
 
-    classes=np.empty(n_nodes, dtype=np.uint32)
+    classes=np.empty(n_nodes, dtype=np.int32)
     for i in range(num_classes):
         for j in range(start_nodes_by_class[i], end_nodes_by_class[i]):
             classes[nodes_by_class[j]]=i
 
 
-    class_costs = np.zeros(num_classes, dtype=np.uint32)
+    class_costs = np.zeros(num_classes, dtype=np.int32)
     for i in range(num_classes):
         num_nodes = end_nodes_by_class[i] - start_nodes_by_class[i]
         num_edges = in_degree[start_nodes_by_class[i]]
@@ -73,7 +73,7 @@ def get_degree_partition(in_degree, max_degree):
 
 
 
-@njit([(uint32[:], uint32[:], uint32[:])], cache=True)
+@njit([(int32[:], int32[:], int32[:])], cache=True)
 def color_refinement_nlogn(end_neighbors, neighbors, initial_labels):
     """Compute the coarsest WL refinement"""
     # print("neighbprs")
@@ -96,17 +96,17 @@ def color_refinement_nlogn(end_neighbors, neighbors, initial_labels):
         num_classes, start_nodes_by_class, end_nodes_by_class, nodes_by_class, classes, position_of_node, queue = get_degree_partition(initial_labels,  initial_labels.max())
         depth = 0
         # num_classes=1
-        # start_nodes_by_class = np.empty(n_nodes, dtype=np.uint32)
+        # start_nodes_by_class = np.empty(n_nodes, dtype=np.int32)
         # start_nodes_by_class[0] = 0
-        # end_nodes_by_class = np.empty(n_nodes, dtype=np.uint32)
+        # end_nodes_by_class = np.empty(n_nodes, dtype=np.int32)
         # end_nodes_by_class[0] = n_nodes
-        # position_of_node = np.arange(n_nodes, dtype=np.uint32)
-        # nodes_by_class = np.arange(n_nodes, dtype=np.uint32)
-        # queue = np.empty(n_nodes, dtype=np.uint32)
+        # position_of_node = np.arange(n_nodes, dtype=np.int32)
+        # nodes_by_class = np.arange(n_nodes, dtype=np.int32)
+        # queue = np.empty(n_nodes, dtype=np.int32)
         # queue[0]=0
     #original = np.arange(len(neighbors))
     #where = np.arange(len(neighbors))
-    out_classes = np.empty((n_nodes,3), dtype=np.uint32)
+    out_classes = np.empty((n_nodes,3), dtype=np.int32)
     for i in range(num_classes):
         out_classes[i,0]=start_nodes_by_class[i]
         out_classes[i,1]=end_nodes_by_class[i]
@@ -117,21 +117,21 @@ def color_refinement_nlogn(end_neighbors, neighbors, initial_labels):
 
 
     # per node characteristics
-    #classes = np.zeros(n_nodes, dtype=np.uint32)
-    receive_counts = np.zeros(n_nodes, dtype=np.uint32)
+    #classes = np.zeros(n_nodes, dtype=np.int32)
+    receive_counts = np.zeros(n_nodes, dtype=np.int32)
     node_is_active = np.zeros(n_nodes, dtype=np.bool_)
-    #position_of_node = np.arange(n_nodes, dtype=np.uint32)
+    #position_of_node = np.arange(n_nodes, dtype=np.int32)
 
     # nodes per class
-    #start_nodes_by_class = np.empty(n_nodes, dtype=np.uint32)
+    #start_nodes_by_class = np.empty(n_nodes, dtype=np.int32)
     #start_nodes_by_class[0] = 0 # first class contains all nodes
-    #end_nodes_by_class = np.empty(n_nodes, dtype=np.uint32)
+    #end_nodes_by_class = np.empty(n_nodes, dtype=np.int32)
     #end_nodes_by_class[0] = n_nodes # first class contains all nodes
     #nodes_by_class = np.arange(n_nodes)
-    received_nodes_by_class = np.empty(n_nodes, dtype=np.uint32)
+    received_nodes_by_class = np.empty(n_nodes, dtype=np.int32)
 
     # queue
-    #queue = np.empty(n_nodes, dtype=np.uint32)
+    #queue = np.empty(n_nodes, dtype=np.int32)
     #queue[0:num_classes]=np.arange(num_classes)
     queue_R = num_classes
     queue_L = 0
@@ -144,17 +144,17 @@ def color_refinement_nlogn(end_neighbors, neighbors, initial_labels):
 
 
     #num_classes = 1
-    active_nodes_in_class = np.zeros(n_nodes, dtype=np.uint32) # counts the number of nodes that are affected by message passing of current class
-    active_classes = np.empty(n_nodes, dtype=np.uint32)# max_size: if all nodes have unique degree active_classes = n_nodes-1
+    active_nodes_in_class = np.zeros(n_nodes, dtype=np.int32) # counts the number of nodes that are affected by message passing of current class
+    active_classes = np.empty(n_nodes, dtype=np.int32)# max_size: if all nodes have unique degree active_classes = n_nodes-1
     num_active_classes = 0
 
     # per group statistics
-    group_ids = np.zeros(max_degree+1, dtype=np.uint32)# max_size is upper bounded by max_degree+1 as no node can have count > max_degree
-    num_nodes_per_group_scattered = np.zeros(max_degree+1, dtype=np.uint32) # max_size: see above
-    num_nodes_per_group = np.zeros(max_degree+1, dtype=np.uint32) # max_size: see above
-    #nodes_in_group = np.zeros(n_nodes, dtype=np.uint32) # max_size=n_nodes because it is full in first iteration, afterwards could be max_i(num_nodes_with_degree=i * i)
-    nodes_indices_by_group = np.zeros(max_degree+1, dtype=np.uint32)
-    class_name_for_group = np.zeros(max_degree+1, dtype=np.uint32)
+    group_ids = np.zeros(max_degree+1, dtype=np.int32)# max_size is upper bounded by max_degree+1 as no node can have count > max_degree
+    num_nodes_per_group_scattered = np.zeros(max_degree+1, dtype=np.int32) # max_size: see above
+    num_nodes_per_group = np.zeros(max_degree+1, dtype=np.int32) # max_size: see above
+    #nodes_in_group = np.zeros(n_nodes, dtype=np.int32) # max_size=n_nodes because it is full in first iteration, afterwards could be max_i(num_nodes_with_degree=i * i)
+    nodes_indices_by_group = np.zeros(max_degree+1, dtype=np.int32)
+    class_name_for_group = np.zeros(max_degree+1, dtype=np.int32)
 
     # # performance metrics
     # num_messages = 0

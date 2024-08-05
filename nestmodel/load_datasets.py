@@ -55,7 +55,7 @@ class Dataset:
     def get_edges_pandas(self, datasets_dir):
         """Reads edges using pands read_csv function"""
         df = pd.read_csv(datasets_dir/self.file_name, skiprows=self.skip_rows, header=None, sep=self.delimiter)
-        edges = np.array([df[0].to_numpy(), df[1].to_numpy()],dtype=np.uint64).T
+        edges = np.array([df[0].to_numpy(), df[1].to_numpy()],dtype=np.int64).T
 
 
         if self.requires_node_renaming:
@@ -120,7 +120,7 @@ def load_fast_graph(dataset_path, dataset, verbosity=0):
                                     dataset,
                                     verbosity=verbosity,
                                     force_reload=True)
-    edges = np.array(g_base.get_edges(), dtype=np.uint32)
+    edges = np.array(g_base.get_edges(), dtype=np.int32)
 
     G = FastGraph(edges, g_base.is_directed())
     return G
@@ -169,8 +169,8 @@ def load_fg_dataset_cached(datasets_dir, dataset_name, verbosity=0, force_reload
         if verbosity>1:
             print("loading raw")
         edges, is_directed = load_dataset(datasets_dir, dataset_name)
-        if edges.max() < np.iinfo(np.uint32).max:
-            edges = edges.astype(np.uint32)
+        if edges.max() < np.iinfo(np.int32).max:
+            edges = edges.astype(np.int32)
         print(edges.dtype)
         g = FastGraph(edges, is_directed)
         g.save_npz(str(cache_file.absolute()))

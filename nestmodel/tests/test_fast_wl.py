@@ -15,7 +15,7 @@ from nestmodel.load_datasets import get_dataset_folder
 
 
 def create_line_graph(n):
-    edges = np.empty((2*(n-1), 2), dtype=np.uint64)
+    edges = np.empty((2*(n-1), 2), dtype=np.int64)
 
     edges[:n-1,0]= np.arange(n-1)
     edges[:n-1,1]= np.arange(1,n)
@@ -25,7 +25,7 @@ def create_line_graph(n):
 
 class TestFastWLMethods(unittest.TestCase):
     def test_to_in_neighbors(self):
-        edges = np.array([[0,1,0], [1,2,2]], dtype=np.uint32).T
+        edges = np.array([[0,1,0], [1,2,2]], dtype=np.int32).T
         arr1, arr2, _ = to_in_neighbors(edges, 0)
         np.testing.assert_array_equal(arr1, [0,0,1,3])
         np.testing.assert_array_equal(arr2, [0,1,0])
@@ -88,7 +88,7 @@ class TestFastWLMethods(unittest.TestCase):
         n=3
         edges = create_line_graph(n)
         solutions = [
-             np.zeros(n, dtype=np.uint32),
+             np.zeros(n, dtype=np.int32),
              [0, 1,  0]
         ]
         order_sol = [0,2,1]
@@ -99,7 +99,7 @@ class TestFastWLMethods(unittest.TestCase):
         n=5
         edges = create_line_graph(n)
         solutions = [
-             np.zeros(n, dtype=np.uint32),
+             np.zeros(n, dtype=np.int32),
              [0, 1, 1, 1,  0],
              [0, 1, 2, 1,  0]
 
@@ -112,7 +112,7 @@ class TestFastWLMethods(unittest.TestCase):
         n=8
         edges = create_line_graph(n)
         solutions = [
-             np.zeros(n, dtype=np.uint32),
+             np.zeros(n, dtype=np.int32),
              [0, 1, 1, 1, 1, 1, 1, 0],
              [0, 1, 2, 2, 2, 2, 1, 0],
              [0, 1, 2, 3, 3, 2, 1, 0]
@@ -128,7 +128,7 @@ class TestFastWLMethods(unittest.TestCase):
         n=7
         edges = create_line_graph(n)
         solutions = [
-             np.zeros(n, dtype=np.uint32),
+             np.zeros(n, dtype=np.int32),
              [0, 1, 1, 1, 1, 1, 0],
              [0, 1, 2, 2, 2, 1, 0],
              [0, 1, 2, 3, 2, 1, 0]
@@ -149,7 +149,7 @@ class TestFastWLMethods(unittest.TestCase):
              [0, 1, 2, 3, 2, 1, 0],
         ]
 
-        starting_labels = np.array([0,0,0,100,0,0,0], dtype=np.uint32)
+        starting_labels = np.array([0,0,0,100,0,0,0], dtype=np.int32)
         self.verify_wl_all(edges, n, solutions, None, None, labels=starting_labels)
 
 
@@ -171,7 +171,7 @@ class TestFastWLMethods(unittest.TestCase):
                 [7, 3],
                 [8, 4],
                 [8, 5],
-                [7, 6]], dtype=np.uint32)
+                [7, 6]], dtype=np.int32)
 
 
         solutions = [[0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -193,7 +193,7 @@ class TestFastWLMethods(unittest.TestCase):
                 [3, 8],
                 [4, 8],
                 [5, 7],
-                [6, 9]], dtype=np.uint32)
+                [6, 9]], dtype=np.int32)
         solutions = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                     [0, 0, 0, 0, 0, 1, 2, 2, 3, 3],
                     [0, 0, 0, 0, 0, 1, 2, 3, 4, 5],]
@@ -212,11 +212,11 @@ class TestFastWLMethods(unittest.TestCase):
         for num_edges in tqdm(range(2,13), leave=False):
             list_edges = np.load(folder/f"ge{num_edges}d1.npy")
             for i in tqdm(range(list_edges.shape[0]), leave=False):
-                edges = np.array(list_edges[i,:,:],dtype=np.uint32)
+                edges = np.array(list_edges[i,:,:],dtype=np.int32)
                 self.verify_agreement(edges, edges.ravel().max()+1, subtest= (num_edges, i))
 
     def test_bincount(self):
-        arr = np.array([2,1,0,0], dtype=np.uint32)
+        arr = np.array([2,1,0,0], dtype=np.int32)
         out = my_bincount(arr, 0)
         np.testing.assert_array_equal(out, [2,1,1])
 
