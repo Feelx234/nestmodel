@@ -1,6 +1,6 @@
 from copy import copy
-import numpy as np
 import warnings
+import numpy as np
 from nestmodel.utils import networkx_from_edges, graph_tool_from_edges, calc_color_histogram, switch_in_out, make_directed
 from nestmodel.fast_wl import WL_fast, WL_both
 
@@ -200,8 +200,7 @@ class FastGraph:
     def _calc_wl(self, method, initial_colors=None, max_depth=None):
         edges = self.edges
         if not self.is_directed:
-            edges2 = np.vstack((edges[:,1], edges[:,0])).T
-            edges = np.vstack((edges, edges2))
+            edges = make_directed(edges)
         if type(initial_colors).__module__ == np.__name__: # is numpy array
             return method(edges, self.num_nodes, labels = initial_colors, max_iter=max_depth)
         elif isinstance(initial_colors, str):

@@ -491,12 +491,12 @@ def color_refinement_nlogn(end_neighbors, neighbors, initial_labels):
                     else:
                         put_in=True
                     group_class = class_name_for_group[group_id]
+                    start_nodes_by_class[group_class] = offset + nodes_indices_by_group[group_id]
 
-
-                    if i == 0:
-                        start_nodes_by_class[group_class] = offset
-                    else:
-                        start_nodes_by_class[group_class] = offset + num_nodes_per_group[i-1]
+                    # if i == 0:
+                    #     start_nodes_by_class[group_class] = offset
+                    # else:
+                    #     start_nodes_by_class[group_class] = offset + num_nodes_per_group[i-1]
                     end_nodes_by_class[group_class] = offset + num_nodes_per_group[i]
 
                     if put_in:

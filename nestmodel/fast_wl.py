@@ -1,6 +1,6 @@
 # pylint: disable=consider-using-enumerate
 from numba import njit
-from numba.types import int32, int64
+from numba.types import int16, int32, int64
 import numpy as np
 from nestmodel.colorings import make_labeling_compact, RefinementColors
 from nestmodel.wl_nlogn import color_refinement_nlogn
@@ -29,7 +29,7 @@ def primesfrom2to(n):
 
 
 
-@njit([(int32[:], int32), (int64[:], int64)],cache=True)
+@njit([(int16[:], int32), (int32[:], int32), (int64[:], int64)],cache=True)
 def my_bincount(arr, min_lenght):
     """The same as numpy bincount, but works on unsigned integers as well"""
     if min_lenght <= 0:
@@ -43,7 +43,7 @@ def my_bincount(arr, min_lenght):
 
 
 
-@njit([(int32[:,:], int32), (int64[:,:], int64)], cache=True)
+@njit([(int16[:,:], int32), (int32[:,:], int32), (int64[:,:], int64)], cache=True)
 def to_in_neighbors(edges, num_nodes):
     """ transforms the edges into two arrays the first arrays indicates ranges into the second array
         the second array contains the in neighbors of those nodes indicated in array 1
@@ -81,7 +81,7 @@ def to_in_neighbors(edges, num_nodes):
 
 
 
-def WL_fast(edges, num_nodes : int = None, labels = None, max_iter : int = None, return_all=False, method="normal"):
+def WL_fast(edges, num_nodes : int = None, labels = None, max_iter : int = None, return_all=False, method="normal", compact=True):
     """Computes the in-WL very fast for the input edges
     edges : array like, shape (num_edges, 2)
         indicates the graph as a set of directed edges
@@ -95,7 +95,7 @@ def WL_fast(edges, num_nodes : int = None, labels = None, max_iter : int = None,
     runtime is O(max_depth * (E + log(N)N) )
     memory requirement is O(E + max_depth * N)
     """
-    assert edges.dtype==np.int32 or edges.dtype==np.int64
+    assert edges.dtype==np.int16 or edges.dtype==np.int32 or edges.dtype==np.int64
     if not labels is None:
         assert labels.dtype==np.int32 or labels.dtype==np.int64
     assert method in ("normal", "nlogn")
@@ -129,7 +129,7 @@ def WL_fast(edges, num_nodes : int = None, labels = None, max_iter : int = None,
     else:
         undo_order, partitions = color_refinement_nlogn(startings, neighbors, labels.copy())
         ref_colors = RefinementColors(partitions, undo_order=undo_order)
-        out = list(ref_colors.get_colors_all_depths())
+        out = list(ref_colors.get_colors_all_depths(compact=compact))
 
 
     if return_all:
