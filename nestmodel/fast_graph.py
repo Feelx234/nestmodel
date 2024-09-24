@@ -4,7 +4,7 @@ import numpy as np
 from nestmodel.utils import networkx_from_edges, graph_tool_from_edges, calc_color_histogram, switch_in_out, make_directed
 from nestmodel.fast_wl import WL_fast, WL_both
 
-from nestmodel.fast_rewire import rewire_fast, dir_rewire_source_only_fast, sort_edges, get_block_indices
+from nestmodel.fast_rewire import rewire_fast, dir_rewire_source_only_fast, sort_edges, get_block_indices, dir_sample_source_only_direct
 
 def ensure_is_numpy_or_none(arr, dtype=np.int64):
     """Validates that sth is numpy array of sth iterable"""
@@ -258,7 +258,7 @@ class FastGraph:
         assert self.base_partitions is not None, "Base partitions are none. Call G.ensure_edges_prepared() first."
         assert depth < len(self.base_partitions), f"{depth} {len(self.base_partitions)}"
         assert self.latest_iteration_rewiring is None or depth <= self.latest_iteration_rewiring, f"{depth} {self.latest_iteration_rewiring}"
-        assert method in (1, 2)
+        assert method in (1, 2, 3)
         if kwargs is not None:
             for key in kwargs:
                 assert key in ("seed", "n_rewire", "r", "parallel", "source_only"), "Invalid keyword provided {key}"
@@ -296,8 +296,26 @@ class FastGraph:
                                     parallel=parallel)
             res = None
         elif method == 2:
+
             from nestmodel.fast_rewire2 import fg_rewire_nest  # pylint: disable=import-outside-toplevel
             res = fg_rewire_nest(self, depth, kwargs["n_rewire"], kwargs["seed"])
+        elif method == 3:
+            source_only = kwargs.get("source_only", False)
+            parallel = kwargs.get("parallel", False)
+
+            if self.is_directed and source_only:
+                if parallel:
+                    warnings.warn("Not running in parallel, direct sampling not yet implemented in parallel")
+                seed = kwargs.get("seed", None)
+                dir_sample_source_only_direct(
+                    self.edges_ordered,
+                    self.base_partitions[depth],
+                    self.block_indices[depth],
+                    seed=seed,
+                )
+                res=None
+            else:
+                raise NotImplementedError("No direct sampling algorithm is available for your configuration")
 
         if self.check_results: # pragma: no cover
             if self.is_directed:

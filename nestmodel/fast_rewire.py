@@ -972,6 +972,91 @@ def dir_rewire_source_only_fast(edges, partition, block, seed=None, num_flip_att
         return _dir_rewire_source_only_fast(edges, nodes_by_class, partition, block, num_flip_attempts)
 
 
+
+def dir_sample_source_only_direct(edges, partition, block, seed=None):
+    """Perform direct sampling from the in-NeSt model"""
+    # assumes edges to be ordered
+    if not seed is None:
+        _set_seed(seed) # numba seed
+        np.random.seed(seed) # numpy seed, seperate from numba seed
+
+    nodes_by_class = collect_nodes_by_color_class(partition)
+    _dir_sample_source_only_direct(edges, nodes_by_class, partition, block)
+
+
+@njit
+def count_in_degree(edges) -> Dict:
+    """Compute a dictionary of in degrees from edges"""
+    degree_counts = Dict()
+    for i in range(edges.shape[0]):
+        v = edges[i,1]
+        if v in degree_counts:
+            degree_counts[v]+=1
+        else:
+            degree_counts[v]=1
+    return degree_counts
+
+
+@njit(cache=True)
+def _dir_sample_source_only_direct(edges, nodes_by_class, partition, block):
+    """Perform direct sampling of the in-NeSt model"""
+
+    for i in range(len(block)):
+        lower = block[i,0]
+        upper = block[i,1]
+        node1 = edges[lower, 0]
+        source_nodes = nodes_by_class[partition[node1]]
+        degree_counts = count_in_degree(edges[lower:upper])
+        n = 0
+        for v, degree in degree_counts.items():
+            tmp = sample_without_replacement(source_nodes, degree, avoid=v)
+            for u in tmp:
+                edges[n,0] = u
+                edges[n,1] = v
+                n+=1
+
+
+@njit
+def sample_without_replacement(arr, k, avoid):
+    """Sample k values without replacement from arr avoiding to sample avoid
+
+    Avoid is assumed to appear no more than once in arr.
+
+    This mutates arr!
+    The algorithm used is a variant of the Fisher-Yates shuffle
+    """
+    n = len(arr)
+
+    if k==len(arr):
+        return arr.copy()
+    if 2*k <= n:
+        num_select = k # choose k elements and put them to the front
+    else:
+        num_select = n-k # choose n-k elements and put them to the front
+                         # these elements will be excluded
+    j0=n
+    for j in range(num_select):
+        val = j + np.random.randint(0,n-j)
+        if arr[val] == avoid:
+            arr[val] = arr[n-1]
+            arr[n-1] = avoid
+            n-=1 # pretend the array is shorted
+            j0=j
+            break
+        tmp = arr[j]
+        arr[j] = arr[val]
+        arr[val] = tmp
+    for j in range(j0, num_select):
+        val = j + np.random.randint(0,n-j)
+        tmp = arr[j]
+        arr[j] = arr[val]
+        arr[val] = tmp
+    if k<= n//2:
+        return arr[:k].copy()
+    else:
+        return arr[k:n].copy() # return the included elements
+
+
 @njit(cache=True)
 def _dir_rewire_source_only_fast(edges, nodes_by_class, partition, block, num_flip_attempts):
     """Rewires only the source node i.e. u in u -> v
