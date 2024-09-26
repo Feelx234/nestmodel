@@ -1,6 +1,6 @@
 import numpy as np
 from numba import njit
-from numba.types import uint32, uint64, int32, int64
+from numba.types import int32, int64
 from nestmodel.utils import inplace_reorder_last_axis
 
 
@@ -100,7 +100,7 @@ def advance_colors_one_round(labels_prev_depth, color_ranges, depth, out):
 
 
 
-@njit([(uint32[:],), (uint64[:],), (int32[:],), (int64[:],)], cache=True)
+@njit([(int32[:],), (int64[:],), (int32[:],), (int64[:],)], cache=True)
 def make_labeling_compact(labeling):
     """Converts a labeling to a labeling starting from zero consecutively"""
 
