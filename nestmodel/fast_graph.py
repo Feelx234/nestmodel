@@ -270,6 +270,7 @@ class FastGraph:
                 ins, outs = calc_color_histogram(self._edges, self.base_partitions[depth], self.is_directed)
             else:
                 hist = calc_color_histogram(self._edges, self.base_partitions[depth], self.is_directed)
+        res = None
         if method==1:
             seed = kwargs.get("seed", None)
             r = kwargs.get("r", 1)
