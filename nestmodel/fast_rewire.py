@@ -1152,10 +1152,14 @@ def _rewire_fast_parallel(edges, edge_class, is_mono_color, block, is_directed, 
     chunks = to_chunks(block[:,1]-block[:,0], get_num_threads()*10)
     to_iter = np.arange(len(chunks)-1)
     np.random.shuffle(to_iter) # randomly assign chunks to threads
+    base_seed = np.random.randint(0, np.iinfo(np.int32).max-1)
 
     #print("parallel " + str(get_num_threads()))
     for i_iter in prange(len(to_iter)):  # pylint: disable=not-an-iterable
-        for i in range(chunks[to_iter[i_iter]], chunks[to_iter[i_iter]+1]):
+        chunk_id = to_iter[i_iter]
+        for i in range(chunks[chunk_id], chunks[chunk_id+1]):
+            chunk_seed = np.bitwise_xor(base_seed, chunk_id)
+            _set_seed(chunk_seed)
             #i = to_iter[u]
             lower = block[i,0]
             upper = block[i,1]
