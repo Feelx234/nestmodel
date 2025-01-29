@@ -893,6 +893,8 @@ def get_flip_attempts_from_input(block, num_flip_attempts_in):
         assert lower < upper
         num_edges = (block[:,1]-block[:,0]).ravel()
         num_flip_attempts = np.random.randint(lower * num_edges, upper*num_edges)
+    else:
+        raise ValueError("num_flip_attempts_in should be integer or tuple")
     return num_flip_attempts
 
 

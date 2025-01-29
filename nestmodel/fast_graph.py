@@ -1,5 +1,6 @@
 from copy import copy
 import warnings
+from functools import partial
 import numpy as np
 from nestmodel.utils import networkx_from_edges, graph_tool_from_edges, calc_color_histogram, switch_in_out, make_directed
 from nestmodel.fast_wl import WL_fast, WL_both
@@ -187,9 +188,10 @@ class FastGraph:
             return G
 
 
-    def calc_wl(self, initial_colors=None, max_depth=None):
+    def calc_wl(self, initial_colors=None, max_depth=None, algorithm="normal"):
         """Compute the WL colors of this graph using the provided initial colors"""
-        return self._calc_wl(WL_fast, initial_colors, max_depth=max_depth)
+        wl_method = partial(WL_fast, method=algorithm)
+        return self._calc_wl(wl_method, initial_colors, max_depth=max_depth)
 
 
     def calc_wl_both(self, initial_colors=None, max_depth=None):
