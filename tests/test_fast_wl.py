@@ -8,7 +8,7 @@ import numpy as np
 
 #from nestmodel.load_datasets import *
 from nestmodel.fast_wl import WL_fast, to_in_neighbors, my_bincount
-from nestmodel.tests.testing import check_colorings_agree
+from nestmodel.testing import check_colorings_agree
 from nestmodel.colorings import RefinementColors
 from nestmodel.load_datasets import get_dataset_folder
 

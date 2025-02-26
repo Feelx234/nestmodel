@@ -322,7 +322,7 @@ class FastGraph:
 
         if self.check_results: # pragma: no cover
             if self.is_directed:
-                from nestmodel.tests.testing import check_color_histograms_agree # pylint: disable=import-outside-toplevel
+                from nestmodel.testing import check_color_histograms_agree # pylint: disable=import-outside-toplevel
                 ins2, outs2 = calc_color_histogram(self.edges_ordered, self.base_partitions[depth], self.is_directed)
                 check_color_histograms_agree(ins, ins2)
                 check_color_histograms_agree(outs, outs2)

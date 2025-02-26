@@ -7,7 +7,7 @@ import numpy as np
 from numpy.testing import assert_array_equal
 
 from nestmodel.colorings import get_depthx_colors_internal, make_labeling_compact, RefinementColors
-from nestmodel.tests.testing import check_colorings_agree
+from nestmodel.testing import check_colorings_agree
 
 
 def safe_diff(arr1, arr2):

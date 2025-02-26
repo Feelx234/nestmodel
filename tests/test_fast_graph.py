@@ -458,7 +458,7 @@ class TestFastGraph(unittest.TestCase):
                             G.rewire(d, method=1, r=4)
                             G.rewire(d, method=1, r=4, parallel=True)
 
-from nestmodel.tests.utils_for_test import restore_numba, remove_numba
+from nestmodel.utils_for_test import restore_numba, remove_numba
 
 class TestFastGraphNonCompiled(TestFastGraph):
     def setUp(self):
