@@ -1,11 +1,10 @@
-from nestmodel.dict_graph import calc_degrees_from_dict, pagerank_dict, edges_to_dict
+from nestmodel.dict_graph import calc_degrees_from_dict, pagerank_dict
 from numba import njit
 import numpy as np
 
 
-
 @njit
-def pagerank_adjacency(M_in, alpha = 0.85, max_iter = 1000, eps = 1e-14):
+def pagerank_adjacency(M_in, alpha=0.85, max_iter=1000, eps=1e-14):
     """
     G: Graph
     beta: teleportation parameter
@@ -15,31 +14,29 @@ def pagerank_adjacency(M_in, alpha = 0.85, max_iter = 1000, eps = 1e-14):
     -> break iteration if L1-norm of difference between old and new pagerank vectors are smaller than eps
     """
     n = M_in.shape[0]
-    norm = np.sum(M_in, axis=1).flatten() # get out degree
+    norm = np.sum(M_in, axis=1).flatten()  # get out degree
 
     M = np.empty_like(M_in)
 
     for i in range(n):
         if norm[i] == 0:
-            M[i,:] = 1/n
+            M[i, :] = 1 / n
         else:
-            M[i,:] = M_in[i,:]/norm[i]
+            M[i, :] = M_in[i, :] / norm[i]
 
-
-    v = np.ones(n)/n#v_0.copy()
-    v_new = np.ones(n)/n
+    v = np.ones(n) / n  # v_0.copy()
+    v_new = np.ones(n) / n
     i = 0
 
     while True:
-        v[:] = v_new/v_new.sum()
-        v_new[:] = alpha * v @ M   + (1.0 - alpha)/n
-        v_new/=v_new.sum()
+        v[:] = v_new / v_new.sum()
+        v_new[:] = alpha * v @ M + (1.0 - alpha) / n
+        v_new /= v_new.sum()
         i += 1
         if np.linalg.norm(v - v_new, 1) < eps or i > max_iter:
             break
 
     return v_new
-
 
 
 @njit
@@ -53,48 +50,48 @@ def edge_flip_ergm_pagerank_adjacency(A, target_p, n_steps, phi, seed):
     M = A.copy()
 
     p_work1 = target_p.copy()
-    p=p_work1
+    p = p_work1
 
     previous_err = np.sum(np.abs(pagerank_adjacency(M) - target_p))
     successes = 0
     failures = 0
 
-
     for _ in range(n_steps):
-        i = np.random.randint(0,n)
-        j = np.random.randint(0,n)
-        if i==j:
+        i = np.random.randint(0, n)
+        j = np.random.randint(0, n)
+        if i == j:
             continue
-        if A[i,j]==0:
-            M[i,j] = 1
-            M[j,i] = 1
+        if A[i, j] == 0:
+            M[i, j] = 1
+            M[j, i] = 1
         else:
-            M[i,j] = 0
-            M[j,i] = 0
+            M[i, j] = 0
+            M[j, i] = 0
 
         p = pagerank_adjacency(M)
         err = np.sum(np.abs(p - target_p))
-        delta = np.exp(- phi * (err - previous_err) )
+        delta = np.exp(-phi * (err - previous_err))
 
         if np.random.random() < min(1, delta):
-            if A[i,j]==0:
-                A[i,j]=1
-                A[j,i]=1
-            else: # A[i,j]==1
-                A[i,j]=0
-                A[j,i]=0
+            if A[i, j] == 0:
+                A[i, j] = 1
+                A[j, i] = 1
+            else:  # A[i,j]==1
+                A[i, j] = 0
+                A[j, i] = 0
             previous_err = err
-            successes +=1
+            successes += 1
         else:
-            M[i,j] = A[i,j]
-            M[j,i] = A[j,i]
-            failures+=1
+            M[i, j] = A[i, j]
+            M[j, i] = A[j, i]
+            failures += 1
     p = pagerank_adjacency(A)
     if n_steps == 0:
         ratio = 0
     else:
-        ratio = successes/(n_steps)
+        ratio = successes / (n_steps)
     return p, ratio
+
 
 @njit
 def edge_flip_ergm_pagerank_dict(edge_dict, n, target_p, n_steps, phi, seed):
@@ -104,41 +101,49 @@ def edge_flip_ergm_pagerank_dict(edge_dict, n, target_p, n_steps, phi, seed):
     np.random.seed(seed)
 
     p_work1 = target_p.copy()
-    p=p_work1
+    p = p_work1
 
     degrees = calc_degrees_from_dict(edge_dict, n)
 
-    previous_err = np.sum(np.abs(pagerank_dict(edge_dict, n, degrees,) - target_p))
+    previous_err = np.sum(
+        np.abs(
+            pagerank_dict(
+                edge_dict,
+                n,
+                degrees,
+            )
+            - target_p
+        )
+    )
     successes = 0
     failures = 0
 
-
     for _ in range(n_steps):
-        k = np.random.randint(0,n*n)
+        k = np.random.randint(0, n * n)
         j = np.int32(k % n)
-        i = np.int32((k - j) //n)
+        i = np.int32((k - j) // n)
 
-        if i==j:
+        if i == j:
             continue
-        current_edge = (i,j)
+        current_edge = (i, j)
         added = False
         if current_edge in edge_dict:
             del edge_dict[current_edge]
-            degrees[i]-= 1
-            degrees[j]-= 1
+            degrees[i] -= 1
+            degrees[j] -= 1
         else:
             edge_dict[current_edge] = True
-            degrees[i]+= 1
-            degrees[j]+= 1
+            degrees[i] += 1
+            degrees[j] += 1
             added = True
         p = pagerank_dict(edge_dict, n, degrees)
         err = np.sum(np.abs(p - target_p))
-        delta = np.exp(- phi * (err - previous_err) )
+        delta = np.exp(-phi * (err - previous_err))
 
         if np.random.random() < min(1, delta):
             previous_err = err
-            successes +=1
-        else: # undo proposed changes
+            successes += 1
+        else:  # undo proposed changes
             if not added:
                 edge_dict[current_edge] = True
                 degrees[i] += 1
@@ -147,12 +152,16 @@ def edge_flip_ergm_pagerank_dict(edge_dict, n, target_p, n_steps, phi, seed):
                 del edge_dict[current_edge]
                 degrees[i] -= 1
                 degrees[j] -= 1
-            failures+=1
-    p = pagerank_dict(edge_dict, n, degrees,)
+            failures += 1
+    p = pagerank_dict(
+        edge_dict,
+        n,
+        degrees,
+    )
     if n_steps == 0:
         ratio = 0
     else:
-        ratio = successes/(n_steps)
+        ratio = successes / (n_steps)
     return p, ratio
 
 

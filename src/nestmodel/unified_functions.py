@@ -1,15 +1,19 @@
-"""This file should contain functions that work independent of the underlying graph structure used (e.g. networkx or graph-tool)"""
+"""This file should contain functions that work independent of the underlying graph structure used
+ (e.g. networkx or graph-tool)"""
+
 import numpy as np
+
 
 def is_networkx_str(G_str):
     """Checks whether a repr string is from networkx Graph"""
-    if (G_str.startswith("<networkx.classes.graph.Graph") or
-        G_str.startswith("<networkx.classes.digraph.DiGraph")):
+    if G_str.startswith("<networkx.classes.graph.Graph") or G_str.startswith(
+        "<networkx.classes.digraph.DiGraph"
+    ):
         return True
     return False
 
 
-def is_graphtool_str(G_str): # pragma: gt no cover
+def is_graphtool_str(G_str):  # pragma: gt no cover
     """Checks whether a repr string is from graph-tool Graph"""
     if G_str.startswith("<Graph object, "):
         return True
@@ -32,7 +36,7 @@ def is_directed(G):
         return G.is_directed()
     elif is_fastgraph_str(G_str):
         return G.is_directed
-    elif is_graphtool_str(G_str): # pragma: gt no cover
+    elif is_graphtool_str(G_str):  # pragma: gt no cover
         return G.is_directed()
     else:
         raise NotImplementedError()
@@ -45,24 +49,30 @@ def num_nodes(G):
         return G.number_of_nodes()
     elif is_fastgraph_str(G_str):
         return G.num_nodes
-    elif is_graphtool_str(G_str): # pragma: gt no cover
+    elif is_graphtool_str(G_str):  # pragma: gt no cover
         return G.num_vertices()
     else:
         raise NotImplementedError()
+
 
 def get_sparse_adjacency(G):
     """Returns a sparse adjacency matrix as in networkx"""
     G_str = repr(G)
     if is_networkx_str(G_str):
-        import networkx as nx # pylint: disable=import-outside-toplevel
+        import networkx as nx  # pylint: disable=import-outside-toplevel
+
         return nx.to_scipy_sparse_array(G, dtype=np.float64)
     elif is_fastgraph_str(G_str):
         return G.to_coo()
-    elif is_graphtool_str(G_str): # pragma: gt no cover
-        from graph_tool.spectral import adjacency # pylint: disable=import-outside-toplevel, import-error # type: ignore
+    elif is_graphtool_str(G_str):  # pragma: gt no cover
+        from graph_tool.spectral import (
+            adjacency,
+        )  # pylint: disable=import-outside-toplevel, import-error # type: ignore
+
         return adjacency(G).T
     else:
         raise NotImplementedError()
+
 
 def get_out_degree_array(G):
     """Returns an array containing the out-degrees of each node"""
@@ -75,7 +85,7 @@ def get_out_degree_array(G):
 
     elif is_fastgraph_str(G_str):
         return G.out_degree
-    elif is_graphtool_str(G_str): # pragma: gt no cover
+    elif is_graphtool_str(G_str):  # pragma: gt no cover
         return G.get_out_degrees(np.arange(num_nodes(G)))
     else:
         raise NotImplementedError()
@@ -83,26 +93,31 @@ def get_out_degree_array(G):
 
 def _nx_dict_to_array(d):
     """Helper function converting dict to array"""
-    return np.array(d, dtype=np.int32)[:,1]
+    return np.array(d, dtype=np.int32)[:, 1]
 
 
 def to_fast_graph(G):
     """Attempts to convert any graph object into a FastGraph"""
-    from nestmodel.fast_graph import FastGraph # pylint:disable=import-outside-toplevel
+    from nestmodel.fast_graph import FastGraph  # pylint:disable=import-outside-toplevel
+
     G_str = repr(G)
     if is_networkx_str(G_str):
         return FastGraph.from_nx(G)
     elif is_fastgraph_str(G_str):
-        from copy import copy # pylint:disable=import-outside-toplevel
+        from copy import copy  # pylint:disable=import-outside-toplevel
+
         return copy(G)
-    elif is_graphtool_str(G_str): # pragma: gt no cover
+    elif is_graphtool_str(G_str):  # pragma: gt no cover
         return FastGraph.from_gt(G)
     else:
         raise NotImplementedError()
 
-def rewire_graph(G, depth=0, initial_colors=None, method=1, both = False, **kwargs):
+
+def rewire_graph(G, depth=0, initial_colors=None, method=1, both=False, **kwargs):
     """Helper function employing NeSt rewiring on a copy of an arbitrary graph"""
     G_fg = to_fast_graph(G)
-    G_fg.ensure_edges_prepared(initial_colors=initial_colors,  both=both, max_depth=depth+1)
+    G_fg.ensure_edges_prepared(
+        initial_colors=initial_colors, both=both, max_depth=depth + 1
+    )
     G_fg.rewire(depth=depth, method=method, **kwargs)
     return G_fg
