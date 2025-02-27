@@ -1,6 +1,6 @@
 from pathlib import Path
 import numpy as np
-import pandas as pd
+
 from nestmodel.utils import graph_tool_from_edges
 from nestmodel.fast_graph import FastGraph
 
@@ -55,6 +55,7 @@ class Dataset:
 
     def get_edges_pandas(self, datasets_dir):
         """Reads edges using pands read_csv function"""
+        import pandas as pd # pylint: disable=import-outside-toplevel
         df = pd.read_csv(
             datasets_dir / self.file_name,
             skiprows=self.skip_rows,
