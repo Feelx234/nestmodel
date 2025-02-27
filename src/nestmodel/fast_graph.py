@@ -18,6 +18,9 @@ from nestmodel.fast_rewire import (
     get_block_indices,
     dir_sample_source_only_direct,
 )
+from nestmodel.fast_rewire2 import (
+    fg_rewire_nest,
+)
 
 
 def ensure_is_numpy_or_none(arr, dtype=np.int64):
@@ -209,7 +212,9 @@ class FastGraph:
             G.wl_iterations = npzfile["wl_iterations"]
             G.edges_classes = npzfile["edges_classes"]
 
-            from nestmodel.fast_rewire import create_mono_from_arrs
+            from nestmodel.fast_rewire import (
+                create_mono_from_arrs,
+            )  # pylint: disable=import-outside-toplevel
 
             G.is_mono = []
             for i in range(npzfile["mono_len"]):
@@ -378,10 +383,6 @@ class FastGraph:
                 )
             res = None
         elif method == 2:
-
-            from nestmodel.fast_rewire2 import (
-                fg_rewire_nest,
-            )  # pylint: disable=import-outside-toplevel
 
             res = fg_rewire_nest(self, depth, kwargs["n_rewire"], kwargs["seed"])
         elif method == 3:

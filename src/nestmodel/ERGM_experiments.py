@@ -77,6 +77,8 @@ class ERGM_RewireWrapper:  # pylint: disable = invalid-name
         target_p = self.target_p.copy()
         A_work = self.A0.copy()
         rew_t0 = time.process_time()
+        result_p = None
+        ratio = None
         if self.kind == "adjacency":
             result_p, ratio = edge_flip_ergm_pagerank_adjacency(
                 A_work, target_p, n_steps, phi, seed

@@ -84,12 +84,13 @@ omit = [ # Regexes for lines to exclude from consideration
     "*/io.py",
     "*/long_refinement_graphs.py",
     "*/visualization.py",
+    "*wl.py",
 ]
 
 
 [tool.flake8]
 # Some sane defaults for the code style checker flake8
-max_line_length = 125
+max_line_length = 200
 extend_ignore = ["E203", "W503", "E741"]
 # ^  Black-compatible
 #    E203 and W503 have edge cases handled by black
@@ -112,17 +113,20 @@ good-names = [
     "A",
     "F",
     "H",
-    "F_vals",
-    "F_val",
+    "E",
+    "E2",
     "H_vals",
     "M",
     "SMALL_VAL",
     "LARGE_VAL",
-    "MicroaggWilberCalculator_edu",
-    "N_vals",
-    "N",
+    "Gnp_row_first",
+    "_Gnp_row_first",
+    "SBM",
     "setUp",
     "tearDown",
+    "P",
+    "G_str",
+    "G_fg",
 ]
 
 # Good variable names regexes, separated by a comma. If names match any regex,

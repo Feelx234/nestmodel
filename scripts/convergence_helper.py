@@ -51,7 +51,7 @@ class ParameterWrapper:
         the_range = range(self.number_of_samples)
         if self.tqdm:
             try:
-                from tqdm.auto import tqdm
+                from tqdm.auto import tqdm  # pylint: disable=import-outside-toplevel
 
                 the_range = tqdm(the_range, leave=False, desc="samples")
             except ModuleNotFoundError:
@@ -62,7 +62,7 @@ class ParameterWrapper:
         the_range = range(wl_iterations - 1, -1, -1)
         if self.tqdm:
             try:
-                from tqdm.auto import tqdm
+                from tqdm.auto import tqdm  # pylint: disable=import-outside-toplevel
 
                 the_range = tqdm(the_range, desc="wl_rounds", leave=False)
             except ModuleNotFoundError:

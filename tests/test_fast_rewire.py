@@ -4,11 +4,10 @@
 # faulthandler.enable()
 import unittest
 import numpy as np
+from numpy.testing import assert_array_equal
 
 # from nestmodel.load_datasets import *
 from nestmodel.fast_rewire import sort_edges
-
-from numpy.testing import assert_array_equal
 
 
 def safe_diff(arr1, arr2):
