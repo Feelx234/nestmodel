@@ -30,20 +30,12 @@ keywords = [
     "fixed-degree-sequence-model",
 ]
 license = { file = "LICENSE" }
-dependencies = [
-    'numpy >= 1.23.5',
-    'numba >= 0.56.4',
-    'scipy',
-    'matplotlib',
-    'networkx',
-    'brokenaxes',
-    'nbconvert',
-    'tqdm',
-    'threadpoolctl',
-]
+dependencies = ['numpy >= 1.23.5', 'numba >= 0.56.4', 'scipy', 'networkx']
 
 [project.optional-dependencies]
 test = ['pytest', 'pytest-cov', 'coverage[toml]']
+execute = ['nbconvert', 'tqdm', 'threadpoolctl']
+ui = ['matplotlib', 'brokenaxes', 'tqdm']
 
 [project.urls]
 "Homepage" = "https://github.com/Feelx234/nestmodel"
