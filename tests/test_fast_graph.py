@@ -505,7 +505,7 @@ class TestFastGraph(unittest.TestCase):
                 )
                 G.ensure_edges_prepared(sorting_strategy="source")
                 G.rewire(0, method=1, seed=3, r=1, source_only=True, parallel=parallel)
-                if platform.system() =="Darwin":
+                if platform.system() == "Darwin":
                     np.testing.assert_array_equal(G.edges, [[0, 1]])
                 else:
                     np.testing.assert_array_equal(G.edges, [[2, 1]])
