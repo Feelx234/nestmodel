@@ -154,4 +154,7 @@ scripts/datasets_path.txt
 env
 nestmodel.egginfo
 Untitled.ipynb
-Untitled1.ipynb
+Untitled*.ipynb
+csvs
+demo/images
+experiments
