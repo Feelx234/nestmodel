@@ -1,34 +1,26 @@
 # Neighborhood Structure Configuration Model
 ![Teaser Figure for the Neighborhood Structure Configuration Model](https://raw.githubusercontent.com/Feelx234/nestmodel/main/teaser.png)
-
-![build](https://github.com/Feelx234/nestmodel/actions/workflows/pythonapp.yml/badge.svg)
+[![build](https://github.com/Feelx234/nestmodel/actions/workflows/ci.yaml/badge.svg)](https://github.com/Feelx234/nestmodel/actions)
+[![Coverage Status](https://coveralls.io/repos/github/Feelx234/nestmodel/badge.svg)](https://coveralls.io/github/Feelx234/nestmodel)
 [![Published at The Web Conference](https://img.shields.io/badge/Published_at_-_ACM_WebConf_-blue)](https://doi.org/10.1145/3543507.3583266)
 [![arXiv:2210.06843](https://img.shields.io/badge/arXiv-2210.06843-b31b1b.svg?logo=arxiv)](https://arxiv.org/abs/2210.06843)
 
-Neighborhood Structure Configuration Models (short NeSt-models) allow to generate random graphs that preserved the neighborhood structure of a given graph for arbitrary depth d.
+`nestmodel` allows to randomize graphs while preserving the neighborhood structure of a given graph for arbitrary depth d.
 
-This package provides the implementation as used in our paper.
+This package provides the implementation of the necessary randomization routines as well as routines to compute the refinement colors.
 
 
 # Installation instructions
 You can install this library like any other python package, depending packages are also installed along with it.
 
-### Installing nestmodel
 Nestmodel is available on pypi thus you can simply install it via:
 ```
 pip install nestmodel
 ```
 
-### Installing nestmodel from source
-```
-git clone https://github.com/Feelx234/nestmodel.git
-pip install nestmodel
-```
-The installation should take less than a minute.
-If you also want to notebooks in the scripts folder please install `jupyter` as outlined below.
-```
-pip install jupyter
-```
+
+
+# Reproducing the results from the paper
 
 ### Making sure the installation went smoothly
 
@@ -39,7 +31,6 @@ python -m pytest nestmodel
 ```
 If you do not have the graph tools library installed, the tests will emit a warning that it is not installed which can be ignored for now.
 
-# Reproducing the results from the paper
 
 Before reproducing the results you need to get the **datasets**. We provide a download script `/scripts/get_datasets.py` which will download all datasets for you.
 ```
