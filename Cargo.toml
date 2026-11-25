@@ -1,0 +1,27 @@
+[package]
+name = "nestmodel-core"
+version = "0.2.0"
+edition = "2021"
+license = "BSD-3-Clause"
+authors = ["Felix I. Stamm <felix.stamm@rwth-aachen.de>"]
+repository = "https://github.com/Feelx234/nestmodel"
+publish = false
+
+[lib]
+name = "_core"
+path = "rust/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.30", features = ["extension-module", "abi3-py39"] }
+numpy = "0.30"
+rand = { version = "0.8", features = ["small_rng"] }
+rayon = "1.10"
+rustc-hash = "2"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+
+[workspace]

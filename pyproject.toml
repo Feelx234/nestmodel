@@ -1,13 +1,11 @@
 [build-system]
-# AVOID CHANGING REQUIRES: IT WILL BE UPDATED BY PYSCAFFOLD!
-requires = ["setuptools>=46.1.0", "setuptools_scm[toml]>=5"]
-build-backend = "setuptools.build_meta"
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
 
 
-[tool.setuptools_scm]
-# For smarter version schemes and other configuration options,
-# check out https://github.com/pypa/setuptools_scm
-version_scheme = "no-guess-dev"
+[tool.maturin]
+python-source = "src"
+module-name = "nestmodel._core"
 
 
 [project]
@@ -30,7 +28,7 @@ keywords = [
     "fixed-degree-sequence-model",
 ]
 license = { file = "LICENSE" }
-dependencies = ['numpy >= 1.23.5', 'numba >= 0.56.4', 'scipy', 'networkx']
+dependencies = ['numpy >= 1.23.5', 'scipy', 'networkx']
 
 [project.optional-dependencies]
 test = ['pytest', 'pytest-cov', 'coverage[toml]']
@@ -45,9 +43,8 @@ ui = ['matplotlib', 'brokenaxes', 'tqdm']
 exclude = ["scripts", "demo", "old_notebooks"]
 
 [tool.pytest.ini_options]
-addopts = "-ra --cov --cov-report html --cov-report term-missing"
+addopts = "-ra"
 testpaths = ["./tests"]
-pythonpath = ["src"]
 
 [tool.coverage.run]
 branch = true

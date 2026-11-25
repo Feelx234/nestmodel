@@ -1,124 +1,60 @@
 from nestmodel.fast_graph import FastGraph
 from nestmodel.fast_rewire import count_nodes_by_color_class
 import numpy as np
-from numba import njit
+from nestmodel import _core
 from collections import defaultdict
 from itertools import product, combinations
 
 
-@njit
-def __compute_degrees(E, start, stop, d_source, d_target):
-    """Increments the degree of edges in [start,stop)"""
-    for i in range(start, stop):
-        u = E[i, 0]
-        v = E[i, 1]
-        d_source[u] += 1
-        d_target[v] += 1
+def _edges64(E):
+    return np.ascontiguousarray(E, dtype=np.int64)
 
 
-@njit
-def __reset_degrees(E, start, stop, d_source, d_target):
-    """Resets all degrees of edges in [start,stop) to zero"""
-    for i in range(start, stop):
-        u = E[i, 0]
-        v = E[i, 1]
-        d_source[u] = 0
-        d_target[v] = 0
-
-
-@njit(cache=True)
 def sum_degrees_at_endpoints_both(E, start, stop, d_source, d_target):
-    out = np.int64(0)
-    __compute_degrees(E, start, stop, d_source, d_target)
-    for i in range(start, stop):
-        u = E[i, 0]
-        v = E[i, 1]
-        out += np.int64(d_source[u])
-        out += np.int64(d_target[v])
-    __reset_degrees(E, start, stop, d_source, d_target)
-    return out
+    """Sums the degrees of both endpoints of all edges in [start, stop), counted inside that range.
+
+    d_source and d_target only determine the number of nodes and whether source and target
+    degrees share one counter (d_source is d_target); they are not modified.
+    """
+    return _core.sum_degrees_at_endpoints_both(
+        _edges64(E), int(start), int(stop), len(d_source), d_source is d_target
+    )
 
 
-@njit(cache=True)
 def sum_degrees_at_endpoints(
     E, num_nodes, block_indices, partition, source=True, target=True, is_directed=True
 ):
     """For each edge sums the degree of the enpoints in that particular block"""
-    buf_source = np.zeros(num_nodes, dtype=np.int32)
-    buf_target = np.zeros(num_nodes, dtype=np.int32)
-    d_source = buf_source
-
-    out = np.int64(0)
-    for i in range(len(block_indices)):
-
-        start = block_indices[i, 0]
-        stop = block_indices[i, 1]
-        is_mono = partition[E[start, 0]] == partition[E[start, 1]]
-        # print("mono", is_mono)
-        # print(E[start:stop,:])
-        if is_directed:
-            d_target = buf_target
-        else:
-            # undirected
-            if is_mono:
-                d_target = d_source
-            else:
-                d_target = buf_target
-
-        __compute_degrees(E, start, stop, d_source, d_target)
-        for i in range(start, stop):
-            u = E[i, 0]
-            v = E[i, 1]
-            if source:
-                out += np.int64(d_source[u])
-            if target:
-                out += np.int64(d_target[v])
-        __reset_degrees(E, start, stop, d_source, d_target)
-        # print(out)
-    return out
+    return _core.sum_degrees_at_endpoints(
+        _edges64(E),
+        int(num_nodes),
+        _edges64(block_indices),
+        np.ascontiguousarray(partition, dtype=np.int64),
+        bool(source),
+        bool(target),
+        bool(is_directed),
+    )
 
 
-@njit(cache=True)
 def count_mono_color_edges(E, colors, block_indices):
     """Counts the number of edges where source and target have the same color"""
-    num_mono = np.int64(0)
-    for i in range(len(block_indices)):
-        start = block_indices[i, 0]
-        stop = block_indices[i, 1]
-        for i in range(start, stop):
-            u = E[i, 0]
-            v = E[i, 1]
-            if colors[u] == colors[v]:
-                num_mono += np.int64(1)
-    return num_mono
+    block_indices = np.asarray(block_indices, dtype=np.int64).reshape(-1, 2)
+    mono = colors[E[:, 0]] == colors[E[:, 1]]
+    prefix = np.concatenate([[0], np.cumsum(mono, dtype=np.int64)])
+    return np.int64((prefix[block_indices[:, 1]] - prefix[block_indices[:, 0]]).sum())
 
 
-@njit(cache=True)
 def count_source_node_per_block(E, partition, number_of_nodes_by_class, block_indices):
     """Counts the number of nodes with the same color as the source for each block"""
-    num_nodes = np.empty(len(block_indices), dtype=np.int64)
-    for i in range(len(block_indices)):
-        start = block_indices[i, 0]
-        # stop = block_indices[i, 1]
-        source_node = E[start, 0]
-        # target_node = E[start, 1]
-        source_color = partition[source_node]
-        # target_color = partition[source_node]
-        num_other_nodes_with_color = number_of_nodes_by_class[np.int64(source_color)]
-
-        num_nodes[i] = num_other_nodes_with_color
-    return num_nodes
+    block_indices = np.asarray(block_indices, dtype=np.int64).reshape(-1, 2)
+    source_colors = partition[E[block_indices[:, 0], 0]].astype(np.int64)
+    return np.asarray(number_of_nodes_by_class)[source_colors].astype(np.int64)
 
 
-@njit(cache=True)
 def block_sizes(block_indices):
     """Computes an array that contains the sizes of each block"""
-    out_block_sizes = np.empty(len(block_indices), dtype=np.int64)
-    for i in range(len(block_indices)):
-        start = block_indices[i, 0]
-        stop = block_indices[i, 1]
-        out_block_sizes[i] = stop - start
-    return out_block_sizes
+    block_indices = np.asarray(block_indices, dtype=np.int64).reshape(-1, 2)
+    return block_indices[:, 1] - block_indices[:, 0]
 
 
 def number_of_flips_possible(G: FastGraph, kind="normal"):

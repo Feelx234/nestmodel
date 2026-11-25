@@ -34,49 +34,33 @@ class TestUnifiedFunctions(unittest.TestCase):
         self.assertTrue(G_fg.is_directed)
         assert_array_equal(G.edges, [(0, 1), (1, 2)])
 
+    # numba's random stream is not reproduced by the compiled rewiring, so the tests
+    # check the set of outcomes reachable over many seeds
+    def _outcomes(self, edges, is_directed, **kwargs):
+        G = FastGraph(edges.copy(), is_directed=is_directed)
+        out = set()
+        for seed in range(200):
+            G_rew = rewire_graph(G, depth=0, seed=seed, **kwargs)
+            out.add(tuple(sorted(tuple(sorted(e)) for e in G_rew.edges.tolist()))
+                    if not is_directed else tuple(map(tuple, G_rew.edges.tolist())))
+        return out
+
     def test_rewire1_double_edge_1(self):
         edges = np.array([[0, 1], [2, 3]], dtype=np.int32)
-
-        G = FastGraph(edges.copy(), is_directed=True)
-        G_rew = rewire_graph(G, depth=0, method=1, seed=1, r=1)
-        assert_array_equal(G_rew.edges, edges)
-
-        edges2 = np.array([[0, 3], [2, 1]], dtype=np.int32)
-        G = FastGraph(edges.copy(), is_directed=True)
-        G_rew = rewire_graph(G, depth=0, method=1, seed=0, r=1)
-        assert_array_equal(G_rew.edges, edges2)
+        out = self._outcomes(edges, True, method=1, r=1)
+        self.assertEqual(out, {((0, 1), (2, 3)), ((0, 3), (2, 1))})
 
     def test_rewire1_double_edge_2(self):
         edges = np.array([[0, 1], [2, 3]], dtype=np.int32)
-
-        G = FastGraph(edges.copy(), is_directed=True)
-        G_rew = rewire_graph(G, depth=0, method=2, seed=1, n_rewire=1)
-        assert_array_equal(G_rew.edges, edges)
-
-        edges2 = np.array([[0, 3], [2, 1]], dtype=np.int32)
-        G_rew = rewire_graph(G, depth=0, method=2, seed=2, n_rewire=1)
-        assert_array_equal(G_rew.edges, edges2)
+        out = self._outcomes(edges, True, method=2, n_rewire=1)
+        self.assertEqual(out, {((0, 1), (2, 3)), ((0, 3), (2, 1))})
 
     def test_rewire1_double_edge(self):
         edges_in = np.array([[0, 1], [2, 3]], dtype=np.int32)
-        G = FastGraph(edges_in.copy(), is_directed=False)
-
-        result_edges = [
-            np.array([[0, 3], [1, 2]], dtype=np.int32),
-            np.array([[0, 1], [2, 3]], dtype=np.int32),
-            np.array([[0, 2], [3, 1]], dtype=np.int32),
-            np.array([[0, 1], [2, 3]], dtype=np.int32),
-            np.array([[0, 1], [2, 3]], dtype=np.int32),
-            np.array([[1, 0], [2, 3]], dtype=np.int32),
-            np.array([[0, 2], [3, 1]], dtype=np.int32),
-            np.array([[1, 2], [0, 3]], dtype=np.int32),
-            np.array([[1, 3], [2, 0]], dtype=np.int32),
-            np.array([[0, 3], [2, 1]], dtype=np.int32),
-        ]
-
-        for i, res_edges in enumerate(result_edges):
-            G_rew = rewire_graph(G, depth=0, method=1, seed=i, r=1)
-            assert_array_equal(G_rew.edges, res_edges, f"{i}")
+        out = self._outcomes(edges_in, False, method=1, r=1)
+        self.assertEqual(
+            out, {((0, 1), (2, 3)), ((0, 2), (1, 3)), ((0, 3), (1, 2))}
+        )
 
 
 if __name__ == "__main__":

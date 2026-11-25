@@ -263,3 +263,38 @@ class TestFastWLMethods(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestWLFastReturnsRefinementColors(unittest.TestCase):
+    def test_sequence_interface_and_memory(self):
+        rng = np.random.default_rng(0)
+        n = 300
+        edges = rng.integers(0, n, size=(900, 2)).astype(np.int32)
+        for method in ("normal", "nlogn"):
+            with self.subTest(method=method):
+                rc = WL_fast(edges, n, method=method)
+                self.assertIsInstance(rc, RefinementColors)
+                legacy, order, ranges = WL_fast(
+                    edges, n, method=method, return_all=True
+                )
+                self.assertEqual(len(rc), len(legacy))
+                for d, arr in enumerate(rc):  # lazy iteration
+                    check_colorings_agree(arr, legacy[d])
+                    check_colorings_agree(rc[d], legacy[d])
+                np.testing.assert_array_equal(rc[-1], legacy[-1])
+                with self.assertRaises(IndexError):
+                    rc[len(rc)]
+                self.assertEqual(len(rc[1:]), len(rc) - 1)
+
+    def test_max_iter_one_and_deep_graph_memory(self):
+        rc = WL_fast(np.array([[0, 1], [1, 2]], dtype=np.int32), 3, max_iter=1)
+        self.assertEqual(len(rc), 1)
+        # a long path needs ~n/2 rounds; the compact result must stay O(n) in size
+        n = 4000
+        p = np.arange(n - 1, dtype=np.int32)
+        edges = np.stack([p, p + 1], axis=1)
+        rc = WL_fast(edges, n)
+        self.assertGreater(len(rc), 1000)
+        stored = rc.color_ranges.nbytes + rc.order.nbytes + rc.undo_order.nbytes
+        self.assertLess(stored, 100 * n * 8)  # dense storage would be len(rc) * n * 4 > 16 MB
+        self.assertEqual(len(np.unique(rc[len(rc) - 1])), n)

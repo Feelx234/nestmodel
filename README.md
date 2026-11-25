@@ -27,7 +27,7 @@ pip install nestmodel
 To make sure the installation has succeeded we need to install pytest as well and then run the tests
 ```
 pip install pytest
-python -m pytest nestmodel
+python -m pytest tests
 ```
 If you do not have the graph tools library installed, the tests will emit a warning that it is not installed which can be ignored for now.
 
@@ -68,4 +68,4 @@ This package has been tested on *Linux*.
 
 #### Python Dependencies
 The package was tested with various version of python (>=3.8). It depends on other packages that are automatically installed along with nestmodel and can be looked up at the setup.py file.
-Parts of it also depend on the just-in-time compiler `numba` we used version 0.56.4 but should work on other versions as well.
+The color refinement, the edge rewiring and the auxiliary helpers (graph properties, graph6 parsing, G(n,p)/SBM samplers, the pagerank ERGM rewiring) are implemented in compiled Rust and shipped as prebuilt wheels, so they need no compiler or JIT warm-up. numba is no longer a dependency.
