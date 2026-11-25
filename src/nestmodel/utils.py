@@ -2,7 +2,7 @@
 import time
 from collections import Counter, defaultdict
 import numpy as np
-from numba import njit
+from nestmodel import _core
 from nestmodel.wl import labelings_are_equivalent, WL
 
 
@@ -172,20 +172,11 @@ def calc_jaccard_unique_edges(edges1, edges2):
     return intersection / (l1 + l2 - intersection)
 
 
-@njit
 def normalise_undirected_edges_by_labels(edges, labels):
     """Makes sure that edges u-v always have l[u]<=l[v]"""
-    edges2 = np.empty_like(edges)
-    for i, (u, v) in enumerate(edges):
-        l_u = labels[u]
-        l_v = labels[v]
-
-        if l_u <= l_v:
-            edges2[i, 0] = u
-            edges2[i, 1] = v
-        else:  # reverse order
-            edges2[i, 0] = v
-            edges2[i, 1] = u
+    swap = labels[edges[:, 0]] > labels[edges[:, 1]]
+    edges2 = edges.copy()
+    edges2[swap] = edges[swap][:, ::-1]
     return edges2
 
 
@@ -283,7 +274,6 @@ def switch_in_out(edges):
     return edges_tmp
 
 
-@njit(cache=True)
 def find_all_cycles(perm):
     """Find all cycles in the permutation perm
 
@@ -295,46 +285,18 @@ def find_all_cycles(perm):
         the elements at position 2 through 4 inclusive belong to the second cycle and
         the element at position 5 is its own cycle
     """
-    n = len(perm)
-    cycle_arr = np.empty(n, dtype=perm.dtype)
-    cycle_lengths = np.empty(n, dtype=perm.dtype)
-    num_cycles = 0
-    seen = np.zeros(n, dtype=np.bool_)
-    length_cycle = 0
-    for start in range(n):
-        if seen[start]:
-            continue
-        current_pos = start
-        # if perm[current_pos]==start:
-        #    continue
-        while True:
-            seen[current_pos] = True
-            cycle_arr[length_cycle] = current_pos
-            length_cycle += 1
-            current_pos = perm[current_pos]
-            if current_pos == start:
-                break
-        cycle_lengths[num_cycles] = length_cycle
-        num_cycles += 1
-    return cycle_arr, cycle_lengths[0:num_cycles]
+    perm = np.asarray(perm)
+    cycle_arr, lengths = _core.find_all_cycles(np.ascontiguousarray(perm, dtype=np.int64))
+    return cycle_arr.astype(perm.dtype, copy=False), lengths.astype(perm.dtype, copy=False)
 
 
-@njit(cache=True)
 def inplace_reorder_last_axis(arr, order):
     """Reorder the two dimensional array arr along the second axis according to order
+    (arr[i, j] becomes arr[i, order[j]]).
 
     The reordering happens inplace (almost)
     For an array of shape m,n we need O(n) additional memory
     """
-    m, n = arr.shape
-    cycles, lengths = find_all_cycles(order)
-    tmp = arr[0, 0]  # make sure variable persists throughout loops
-    start = 0  # make sure variable persists throughout loops
-    for i in range(m):
-        start = 0
-        for stop in lengths:
-            tmp = arr[i, cycles[start]]
-            for cycle_index in range(start, stop - 1):
-                arr[i, cycles[cycle_index]] = arr[i, cycles[cycle_index + 1]]
-            arr[i, cycles[stop - 1]] = tmp
-            start = stop
+    order = np.asarray(order)
+    for i in range(arr.shape[0]):
+        arr[i] = arr[i][order]

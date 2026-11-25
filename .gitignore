@@ -158,3 +158,5 @@ Untitled*.ipynb
 csvs
 demo/images
 experiments
+target/
+*.so

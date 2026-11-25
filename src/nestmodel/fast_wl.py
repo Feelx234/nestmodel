@@ -1,45 +1,24 @@
 # pylint: disable=consider-using-enumerate
-from numba import njit
-from numba.types import int16, int32, int64
 import numpy as np
+from nestmodel import _core
 from nestmodel.colorings import make_labeling_compact, RefinementColors
 from nestmodel.wl_nlogn import color_refinement_nlogn
 
 
-@njit(cache=True)
 def primesfrom2to(n):
-    """Input n>=6, Returns an array of primes, 2 <= p < n
-    taken from Stackoverflow
-    """
-    size = int(n // 3 + (n % 6 == 2))
-    sieve = np.ones(size, dtype=np.bool_)
-    for i in range(1, int(n**0.5) // 3 + 1):
-        if sieve[i]:
-            k = 3 * i + 1 | 1
-            sieve[k * k // 3 :: 2 * k] = False
-            sieve[k * (k - 2 * (i & 1) + 4) // 3 :: 2 * k] = False
-    arr = (3 * np.nonzero(sieve)[0][1:] + 1) | 1
-    output = np.empty(len(arr) + 2, dtype=arr.dtype)
-    output[0] = 2
-    output[1] = 3
-    output[2:] = arr
-    return output
+    """Input n>=6, Returns an array of primes, 2 <= p < n"""
+    return _core.primesfrom2to(float(n))
 
 
-@njit([(int16[:], int32), (int32[:], int32), (int64[:], int64)], cache=True)
 def my_bincount(arr, min_lenght):
     """The same as numpy bincount, but works on unsigned integers as well"""
-    if min_lenght <= 0:
-        m = arr.max()  # pragma: no cover
-    else:
-        m = min_lenght
-    out = np.zeros(m + 1, dtype=arr.dtype)
-    for i in range(len(arr)):
-        out[arr[i]] += np.int32(1)
-    return out
+    arr = np.asarray(arr)
+    if arr.dtype not in (np.int16, np.int32, np.int64):
+        raise TypeError(f"my_bincount: unsupported dtype {arr.dtype}")
+    out = _core.my_bincount(np.ascontiguousarray(arr, dtype=np.int64), int(min_lenght))
+    return out.astype(arr.dtype, copy=False)
 
 
-@njit([(int16[:, :], int32), (int32[:, :], int32), (int64[:, :], int64)], cache=True)
 def to_in_neighbors(edges, num_nodes):
     """transforms the edges into two arrays the first arrays indicates ranges into the second array
         the second array contains the in neighbors of those nodes indicated in array 1
@@ -52,28 +31,21 @@ def to_in_neighbors(edges, num_nodes):
     starting_positions[i] ..starting_positions[i+1] contains all in neighbors of node i
     in_neighbors
     """
-    if num_nodes == 0:
-        num_nodes = edges.ravel().max()
-    else:
-        assert num_nodes > 0
-        num_nodes -= 1
-    in_degrees = my_bincount(edges[:, 1].ravel(), min_lenght=np.int32(num_nodes))
+    edges = np.asarray(edges)
+    if edges.dtype not in (np.int16, np.int32, np.int64) or edges.ndim != 2:
+        raise TypeError("to_in_neighbors: edges must be a 2d int16/int32/int64 array")
+    return _core.to_in_neighbors(
+        np.ascontiguousarray(edges, dtype=np.int64), int(num_nodes)
+    )
 
-    # starting_positions[i] ..starting_positions[i+1] contains all in neighbors of node i
-    starting_positions = np.empty(in_degrees.shape[0] + 1, dtype=np.int32)
-    starting_positions[0] = 0
-    starting_positions[1:] = in_degrees.cumsum()
-    current_index = starting_positions.copy()
 
-    in_neighbors = np.zeros(edges.shape[0], dtype=np.int32)
-
-    for i in range(edges.shape[0]):
-        l = edges[i, 0]
-        r = edges[i, 1]
-        in_neighbors[current_index[r]] = l
-        current_index[r] += 1
-
-    return starting_positions, in_neighbors, in_degrees.max()
+def _out_neighbors_csr(edges, num_nodes):
+    """Same as to_in_neighbors(edges[:, ::-1], num_nodes) but without copying the edges"""
+    if edges.dtype in (np.int32, np.int64) and edges.ndim == 2:
+        return _core.to_in_neighbors_flat(
+            np.ascontiguousarray(edges), int(num_nodes), True
+        )
+    return to_in_neighbors(edges[:, ::-1], num_nodes)
 
 
 def WL_fast(
@@ -86,6 +58,12 @@ def WL_fast(
     compact=True,
 ):
     """Computes the in-WL very fast for the input edges
+
+    Returns a RefinementColors object, a compact (O(n) memory) representation of all
+    rounds that behaves like a sequence of labelings: len(), indexing by depth and iteration
+    work, and the labeling of every depth is recovered in O(n) on access.
+    With return_all=True the legacy triple (list of all labelings, order, color ranges)
+    is returned instead.
     edges : array like, shape (num_edges, 2)
         indicates the graph as a set of directed edges
     num_nodes : int
@@ -96,7 +74,7 @@ def WL_fast(
         may be used to limit the maximum number of iterations performed
 
     runtime is O(max_depth * (E + log(N)N) )
-    memory requirement is O(E + max_depth * N)
+    memory requirement is O(E + N) (plus O(max_depth * N) when return_all=True)
     """
     assert edges.dtype == np.int16 or edges.dtype == np.int32 or edges.dtype == np.int64
     if labels is not None:
@@ -114,61 +92,39 @@ def WL_fast(
         labels = np.array(labels.copy(), dtype=labels.dtype)
         make_labeling_compact(labels)
 
-    out = [labels]
     if max_iter == 1:
-        return out
-
-    edges2 = np.empty_like(edges)
-    edges2[:, 0] = edges[:, 1]
-    edges2[:, 1] = edges[:, 0]
-    startings, neighbors, _ = to_in_neighbors(edges2, num_nodes)
-    if method == "normal":
-        labelings, order, partitions = _wl_fast2(
-            startings, neighbors, labels.copy(), max_iter
-        )
-        for labeling in labelings:
-            make_labeling_compact(labeling)
-        out.extend(labelings[:-1])  # the stable color is doubled, so omit it
-        ref_colors = RefinementColors(partitions, order=order)
+        ref_colors = RefinementColors.from_labels(labels, compact=compact)
     else:
-        undo_order, partitions = color_refinement_nlogn(
-            startings, neighbors, labels.copy()
+        startings, neighbors, _ = _out_neighbors_csr(edges, num_nodes)
+        if method == "normal":
+            # the labelings of the single rounds are not needed, only the color ranges
+            _, order, ranges = _wl_fast2(
+                startings, neighbors, labels.copy(), max_iter, store_labelings=False
+            )
+            # the last round (which found no new split) is the doubled stable color
+            ranges = ranges[ranges[:, 2] < max_iter]
+            ref_colors = RefinementColors(ranges, order=order)
+        else:
+            undo_order, partitions = color_refinement_nlogn(
+                startings, neighbors, labels.copy()
+            )
+            ref_colors = RefinementColors(partitions, undo_order=undo_order)
+        ref_colors.compact = compact
+
+    if return_all:  # legacy: all labelings (O(depth * n) memory), order, color ranges
+        return (
+            list(ref_colors.get_colors_all_depths(compact=compact)),
+            ref_colors.order,
+            ref_colors.color_ranges,
         )
-        ref_colors = RefinementColors(partitions, undo_order=undo_order)
-        out = list(ref_colors.get_colors_all_depths(compact=compact))
-
-    if return_all:
-        return out, ref_colors.order, partitions
-    else:
-        return out
+    return ref_colors
 
 
-@njit(
-    [(int32[:], int32[:]), (int64[:], int64[:])],
-    locals={"num_entries": int32},
-    cache=True,
-)
 def injective_combine(labels1, labels2):
     """Combine two labelings to create a new labeling that respects both labelings"""
-    #    assert labels1.dtype==np.int32
-    #    assert labels2.dtype==np.int32
-    assert len(labels1) == len(labels2)
-
-    out_labels = np.empty_like(labels1)
-    d = {(labels1[0], labels1[0]): labels1[0]}  # (0,0):0}
-    del d[(labels1[0], labels1[0])]
-    num_entries = 0
-    for i in range(len(labels1)):
-        a = labels1[i]
-        b = labels2[i]
-        x = (a, b)
-        if x in d:
-            out_labels[i] = d[x]
-        else:
-            out_labels[i] = num_entries
-            d[x] = num_entries
-            num_entries += 1
-    return out_labels, len(d)
+    return _core.injective_combine(
+        np.ascontiguousarray(labels1), np.ascontiguousarray(labels2)
+    )
 
 
 def WL_both(
@@ -219,175 +175,26 @@ def WL_both(
     return out
 
 
-@njit(cache=True)
 def is_sorted_fast(vals, order):
     """Checks whether the values in vals are sorted ascedingly when using order"""
-    last_val = vals[order[0]]
-    for i in range(1, len(order)):
-        if vals[order[i]] < last_val:
-            return False
-        last_val = vals[order[i]]
-    return True
+    return _core.is_sorted_fast(
+        np.ascontiguousarray(vals, dtype=np.float64),
+        np.ascontiguousarray(order, dtype=np.int64),
+    )
 
 
-@njit(
-    [(int32[:], int32[:], int32[:], int32), (int32[:], int32[:], int64[:], int32)],
-    cache=True,
-)
-def _wl_fast2(startings, neighbors, labels, max_iter=201):
+def _wl_fast2(startings, neighbors, labels, max_iter=201, store_labelings=True):
     """WL using floating point operations with primes similar to
     https://github.com/rmgarnett/fast_wl/blob/master/wl_transformation.m
-    but with added optimizations
+    but with added optimizations (see rust/wl.rs)
 
-    Notable optimizations:
-    - we only adjust the float values (vals) of those nodes where the neighbors changed label (~30x speedup)
-    - we sort only when it is not sorted (~2x speedup)
-
-    returns a list of partition vectors
-
-    This function ensures that things that are of the same label are of the same label
-       but it could be that in floating precision things that should be of different label are not distinguished
-
-    The scaling is O(d*(n*log(n) + E))
+    returns a list of partition vectors, the order and the color ranges
+    `labels` (int32/int64, contiguous) is modified in place
     """
-    num_nodes = len(startings) - 1
-
-    assert len(labels) == num_nodes
-    if num_nodes >= 6:
-        ln = np.log
-        n = num_nodes
-        correction = np.ceil(ln(n) + ln(ln(n)))
-    else:
-        correction = 5
-    primes = primesfrom2to(num_nodes * correction)
-
-    log_primes = np.log(primes)
-    deltas = log_primes.copy()
-    total_num_colors = 0
-
-    vals = np.empty(num_nodes, dtype=np.float64)
-    partitions = np.empty(num_nodes + 1, dtype=labels.dtype)
-    out_partitions = np.empty((num_nodes, 3), dtype=labels.dtype)
-    if np.all(labels == 0):
-        order = np.arange(num_nodes)
-        partitions[0] = 0
-        partitions[1] = num_nodes
-        out_partitions[0, 0] = 0
-        out_partitions[0, 1] = num_nodes
-        out_partitions[0, 2] = 0
-        num_colors = 1
-        total_num_colors = 1
-        vals[:] = 1
-    else:
-        order = np.argsort(labels)
-        partitions[0] = 0
-
-        num_colors = 1
-        last_new_label = 0
-        last_old_label = labels[order[0]]
-        for i in range(len(order)):
-            node_id = order[i]
-            if labels[node_id] != last_old_label:
-                last_old_label = labels[node_id]
-                partitions[num_colors] = i
-                out_partitions[total_num_colors, 0] = last_new_label
-                out_partitions[total_num_colors, 1] = i
-                out_partitions[total_num_colors, 2] = 0
-                num_colors += 1
-                total_num_colors += 1
-                last_new_label = i
-
-            labels[node_id] = last_new_label
-            vals[node_id] = (
-                labels[node_id] + 1
-            )  # vals cannot be zero, so start counting from one
-        partitions[num_colors] = len(order)
-        out_partitions[total_num_colors, 0] = last_new_label
-        out_partitions[total_num_colors, 1] = len(order)
-        out_partitions[total_num_colors, 2] = 0
-        total_num_colors += 1
-
-    last_num_colors = num_colors
-    out = []
-    order_updates = order.copy()
-    num_updates = num_nodes
-
-    for depth in range(max_iter):
-        # propagate label aka deltas to neighboring nodes
-        for index in range(
-            num_updates
-        ):  # loop over all nodes that changed in last iter
-            i = order_updates[index]
-            lb = startings[i]
-            ub = startings[i + 1]
-            for j in range(lb, ub):  # propagate label of i to neighbor j
-                vals[neighbors[j]] += deltas[labels[i]]
-
-        # sort partitions such that the same values come after one another
-        for i in range(num_colors):
-            lb = partitions[i]
-            ub = partitions[i + 1]
-
-            if ub <= 1 + lb:  # only need sorting if more than one node is involved
-                continue
-            if is_sorted_fast(
-                vals, order[lb:ub]
-            ):  # no need to do any sorting if already sorted
-                continue
-            partition_order = np.argsort(vals[order[lb:ub]])
-            order[lb:ub] = order[lb:ub][partition_order]
-
-        num_colors = 1
-        last_index = 0
-        num_updates = 0
-        num_new_colors = 0
-        last_changed = -1  # need to keep track of last changed color
-
-        last_val = vals[order[0]]
-        for i in range(len(order)):
-
-            node_id = order[i]
-            val = vals[node_id]
-            if val != last_val:  # yes we are using equality for floats,
-                # but floats which were obtained from sorted operations
-                # so no issues with a+b+c != b+c+a
-                if num_new_colors > 0:
-                    out_partitions[total_num_colors - 1, 1] = i
-                    num_new_colors -= 1
-                if labels[node_id] != i:  # create out partition if necessary
-                    out_partitions[total_num_colors, 0] = i
-                    out_partitions[total_num_colors, 2] = depth + 1
-                    total_num_colors += 1
-                    num_new_colors += 1
-
-                last_index = i
-                partitions[num_colors] = i  # create new partition
-                num_colors += 1
-                last_val = val
-                deltas[last_index] = (
-                    log_primes[last_index] - log_primes[labels[node_id]]
-                )
-
-            if labels[node_id] != last_index:  # there is a need for updates
-                last_changed = i
-                order_updates[num_updates] = node_id
-                num_updates += 1
-                vals[node_id] += last_index - labels[node_id]
-
-            labels[node_id] = last_index
-
-        partitions[num_colors] = len(order)
-        if num_new_colors > 0:
-            if last_changed >= 0:
-                out_partitions[total_num_colors - 1, 1] = last_changed + 1
-            else:
-                out_partitions[total_num_colors - 1, 1] = len(order)
-
-        out.append(labels.copy())
-
-        if last_num_colors == num_colors:
-            break
-        else:
-            last_num_colors = num_colors
-
-    return out, order, out_partitions[0:total_num_colors, :]
+    return _core._wl_fast2(  # pylint: disable=protected-access
+        np.ascontiguousarray(startings, dtype=np.int32),
+        np.ascontiguousarray(neighbors, dtype=np.int32),
+        labels,
+        int(max_iter),
+        bool(store_labelings),
+    )

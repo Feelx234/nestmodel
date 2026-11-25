@@ -10,6 +10,7 @@ from nestmodel.utils import (
     make_directed,
 )
 from nestmodel.fast_wl import WL_fast, WL_both
+from nestmodel.colorings import RefinementColors
 
 from nestmodel.fast_rewire import (
     rewire_fast,
@@ -275,6 +276,8 @@ class FastGraph:
                 initial_colors=initial_colors, max_depth=max_depth
             )
 
+        if isinstance(partitions, RefinementColors):
+            partitions = list(partitions)  # canonical numbering, one depth at a time
         self.base_partitions = np.array(partitions, dtype=np.int32)
         self.wl_iterations = len(self.base_partitions)
 
